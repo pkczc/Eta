@@ -83,7 +83,6 @@ internal object BreenoHooks {
     private const val BREENO_STREAM_FLUSH_CHARS = 48
     private const val BREENO_ARCHIVE_TITLE_CHARS = 20
     private const val MAX_PROTOCOL_EVENTS = 32
-    private const val MAX_INBOUND_DIRECTIVE_CHARS = 512 * 1024
     private const val AGENT_BRIDGE_THREADS = 3
     private const val AGENT_BRIDGE_QUEUE_CAPACITY = 16
     private const val CDM_IMAGE_CACHE_ENTRIES = 16
@@ -184,7 +183,8 @@ internal object BreenoHooks {
                 return@install
             }
             hookOutboundMessage(hooks, classLoader)
-            hookInboundMessage(hooks)
+            hookInboundMessage(hooks, classLoader)
+            hookDirectiveDispatch(hooks, classLoader)
             hookCdmTextRequest(hooks)
             hookAIChatDataCenter(hooks, classLoader)
             schedulePendingResultDrains(logger, classLoader)
@@ -226,7 +226,7 @@ internal object BreenoHooks {
         }
     }
 
-    private fun hookInboundMessage(hooks: HookRegistrar) {
+    private fun hookInboundMessage(hooks: HookRegistrar, classLoader: ClassLoader) {
         val logger = hooks.logger
         val method = protocolTargets?.inboundMessage
         if (method == null) {
@@ -244,7 +244,7 @@ internal object BreenoHooks {
             description = "Breeno inbound message"
         ) { chain ->
             val content = chain.args.getOrNull(1) as? String
-            val filteredContent = filterClaimedNativeDirectives(logger, content)
+            val filteredContent = filterClaimedNativeDirectives(logger, classLoader, content)
             try {
                 if (filteredContent == null && content != null) {
                     logger.debug { "inbound suppressed" }
@@ -265,6 +265,41 @@ internal object BreenoHooks {
                 }
                 else -> chain.proceed()
             }
+        }
+    }
+
+    private fun hookDirectiveDispatch(hooks: HookRegistrar, classLoader: ClassLoader) {
+        val method = protocolTargets?.dispatchDirectives ?: return
+        hooks.intercept(
+            id = "breeno.directive-dispatch",
+            executable = method,
+            description = "Breeno native directive dispatch",
+        ) { chain ->
+            val directives = chain.args.getOrNull(0) as? List<*>
+                ?: return@intercept chain.proceed()
+            val origin = chain.args.getOrNull(1) as? String
+            // Use the actual dispatch list: local batches may bypass MessageProcessor,
+            // and its origin string need not contain the same set of directives.
+            val originMetadata = runCatching { JSONObject(origin.orEmpty()) }.getOrNull()
+            val metadata = originMetadata ?: JSONObject()
+            if (metadata.optJSONObject("extend")?.optString(INJECTED_MARKER_KEY) == "true") {
+                return@intercept chain.proceed()
+            }
+            val serialized = serializeForBreenoHistory(directives)
+                ?: return@intercept chain.proceed()
+            val frame = runCatching {
+                metadata.put("directives", JSONArray(serialized)).toString()
+            }.getOrNull() ?: return@intercept chain.proceed()
+            val message = BreenoNativeMessage.parse(frame, currentRoomId(classLoader))
+                ?: return@intercept chain.proceed()
+            claimNativeQueries(hooks.logger, classLoader, message)
+            val kept = message.retainedIndices { isClaimedAgentRoom(it) }
+            if (kept.size == directives.size) return@intercept chain.proceed()
+            if (kept.isEmpty()) return@intercept null
+            val args = chain.args.toTypedArray()
+            args[0] = kept.map { directives[it] }
+            if (originMetadata != null) args[1] = message.filteredContent(kept)
+            chain.proceed(args)
         }
     }
 
@@ -419,77 +454,60 @@ internal object BreenoHooks {
 
     private fun filterClaimedNativeDirectives(
         logger: ModuleLogger,
+        classLoader: ClassLoader,
         content: String?
     ): String? {
-        if (content.isNullOrBlank()) return content
-        if (claimedAgentRooms.isEmpty()) return content
-        if (content.length > MAX_INBOUND_DIRECTIVE_CHARS) {
-            logger.warnThrottled("breeno_native_directive_too_large") {
-                "入站指令超过解析上限，保留原始消息"
-            }
-            return content
+        val message = BreenoNativeMessage.parse(content, currentRoomId(classLoader)) ?: return content
+        if (message.isInjected) return content
+        claimNativeQueries(logger, classLoader, message)
+        val kept = message.retainedIndices {
+            isClaimedAgentRoom(it, NATIVE_DIRECTIVE_SUPPRESS_TTL_MS)
         }
-        return try {
-            val json = JSONObject(content)
-            val roomId = json.optString("roomId")
-            if (roomId.isBlank() || !isClaimedAgentRoom(roomId, NATIVE_DIRECTIVE_SUPPRESS_TTL_MS)) {
-                return content
-            }
-            if (json.optJSONObject("extend")?.optString(INJECTED_MARKER_KEY) == "true") {
-                return content
-            }
-            val directives = json.optJSONArray("directives") ?: return content
-            val kept = JSONArray()
-            var removed = 0
-            for (index in 0 until directives.length()) {
-                val directive = directives.optJSONObject(index)
-                if (directive == null) {
-                    kept.put(directives.opt(index))
-                    continue
-                }
-                val header = directive.optJSONObject("header")
-                val namespace = header?.optString("namespace").orEmpty()
-                val name = header?.optString("name").orEmpty()
-                if (shouldSuppressNativeDirective(namespace, name)) {
-                    removed++
-                } else {
-                    kept.put(directive)
-                }
-            }
-            if (removed == 0) return content
-            logger.debug {
-                "native directives suppressed: " +
-                    "removed=$removed, kept=${kept.length()}"
-            }
-            if (kept.length() == 0) {
-                null
-            } else {
-                json.put("directives", kept).toString()
-            }
-        } catch (exception: Exception) {
-            logger.warnThrottled("breeno_native_directive_filter_failed") {
-                "过滤原生指令失败，type=${exception.safeLogType()}"
-            }
-            content
-        }
+        if (kept.size == message.directiveCount) return content
+        logger.debug { "native directives suppressed: kept=${kept.size}" }
+        return message.filteredContent(kept)
     }
 
-    private fun shouldSuppressNativeDirective(namespace: String, name: String): Boolean =
-        when (namespace) {
-            "MyAI" -> name == "LoadingStateCard" || name == "StreamTextCard"
-            "App",
-            "AnalogClick",
-            "System",
-            "SystemScreen",
-            "Sms",
-            "PhoneCall",
-            "Ocr" -> true
-            "SpeechSynthesizer" -> true
-            "Recommend" -> true
-            "Tracking" -> name == "BreenoFeedback"
-            "SpeechRecognizer" -> name == "ExpectSpeech"
-            else -> false
+    @Synchronized
+    private fun claimNativeQueries(
+        logger: ModuleLogger,
+        classLoader: ClassLoader,
+        message: BreenoNativeMessage,
+    ) {
+        // Claim before processing ANY directive, even when an action appears before
+        // the query/ASR card in the same batch. Recognition itself remains native.
+        for (query in message.queries()) {
+            val prompt = resolveCustomModelPrompt(query.text)
+            if (prompt.isNullOrBlank()) {
+                claimedAgentRooms.remove(query.roomId)
+                continue
+            }
+            val dedupKey = breenoRequestDedupKey(query.roomId, prompt.trim())
+            val startedAt = startedAgentRequests[dedupKey]
+            if (startedAt != null && System.currentTimeMillis() - startedAt <= AGENT_REQUEST_DEDUP_WINDOW_MS) {
+                rememberClaimedAgentRoom(query.roomId)
+                continue
+            }
+            val recordId = query.recordId.ifBlank { query.originalRecordId }.ifBlank { newCompactId() }
+            val request = TextRequest(
+                runId = newCompactId(),
+                text = query.text,
+                imageSnapshot = BreenoRequestImages.merge(
+                    BreenoRequestImages.captureText(query.queryPayload, "directive.query"),
+                    pendingClientImageSnapshotFor(query.recordId, query.originalRecordId, query.sessionId, query.roomId),
+                    cachedImageSnapshotFor(query.recordId, query.originalRecordId, query.sessionId, query.roomId),
+                ),
+                recordId = recordId,
+                originalRecordId = query.originalRecordId.ifBlank { recordId },
+                sessionId = query.sessionId,
+                roomId = query.roomId,
+                history = currentBreenoHistory(classLoader, query.roomId, recordId, query.text),
+                thinkingEnabledOverride = currentBreenoThinkingEnabledOverride(classLoader),
+                queryPayload = query.queryPayload,
+            )
+            startAgentRequest(logger, classLoader, request, prompt, "directive")
         }
+    }
 
     private fun summarizeOutboundMessage(message: Any?): String {
         if (message == null) return "message=null"
@@ -532,6 +550,9 @@ internal object BreenoHooks {
         )
     }
 
+    // Serialize admission with the native-query fast path: a duplicate must not
+    // publish ownership while the first submission can still be rejected.
+    @Synchronized
     private fun startAgentRequest(
         logger: ModuleLogger,
         classLoader: ClassLoader,
@@ -541,6 +562,7 @@ internal object BreenoHooks {
     ): Boolean {
         val requestKey = agentRequestKey(request, prompt)
         if (!markAgentRequestStarted(requestKey)) {
+            if (request.roomId.isNotBlank()) rememberClaimedAgentRoom(request.roomId)
             logger.debug {
                 "Breeno custom model duplicate skipped: source=$logSource, " +
                     "promptChars=${prompt.length}"
@@ -704,6 +726,9 @@ internal object BreenoHooks {
                 throw throwable
             }
             scheduled = true
+            // Publish ownership before admitting the worker or returning to native
+            // dispatch. Outbound text and voice queries must share this boundary.
+            if (request.roomId.isNotBlank()) rememberClaimedAgentRoom(request.roomId)
             val previousRun = activeAgentRun.getAndSet(runState)
             try {
                 previousRun?.cancel(logger)
@@ -1247,7 +1272,7 @@ internal object BreenoHooks {
             recordId = recordId,
             originalRecordId = originalRecordId,
             sessionId = sessionId,
-            roomId = roomId,
+            roomId = roomId.ifBlank { currentRoomId(classLoader) },
             thinkingEnabledOverride = thinkingEnabledOverride
         )
     }
