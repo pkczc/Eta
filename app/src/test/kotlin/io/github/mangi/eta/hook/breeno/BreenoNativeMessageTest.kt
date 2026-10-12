@@ -41,6 +41,18 @@ class BreenoNativeMessageTest {
     }
 
     @Test
+    fun finalizedQueryCardWinsOverAsrAndRetainsItsImageReferences() {
+        val frame = parse(
+            directive("SpeechRecognizer", "RecognizeResult", JSONObject().put("isFinal", true).put("text", "识别原文")),
+            query("最终提问").apply { getJSONObject("payload").put("imageUrl", "content://image/1") },
+        )
+
+        val query = frame.queries().single()
+        assertEquals("最终提问", query.text)
+        assertEquals("content://image/1", JSONObject(requireNotNull(query.queryPayload)).getString("imageUrl"))
+    }
+
+    @Test
     fun claimedTextRequestsSuppressActionsWithoutAnIncomingQueryCard() {
         val frame = parse(directive("App", "Launch"), directive("SpeechSynthesizer", "Speak"))
 

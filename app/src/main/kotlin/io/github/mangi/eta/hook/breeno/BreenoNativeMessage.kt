@@ -45,7 +45,11 @@ internal class BreenoNativeMessage private constructor(
                 sessionId = message.string("sessionId"),
                 queryPayload = if (isQueryCard(directive)) payload.toString() else null,
             )
-        }.distinctBy { it.roomId to it.text }
+        }.groupBy { it.roomId }.values.map { queries ->
+            // The query card can contain the finalized/corrected text and image
+            // references. Prefer it to ASR from the same batch, even if text differs.
+            queries.lastOrNull { it.queryPayload != null } ?: queries.last()
+        }
     }
 
     fun retainedIndices(isClaimed: (String) -> Boolean): List<Int> =

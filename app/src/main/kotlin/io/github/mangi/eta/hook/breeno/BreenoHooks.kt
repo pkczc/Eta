@@ -477,36 +477,52 @@ internal object BreenoHooks {
         // Claim before processing ANY directive, even when an action appears before
         // the query/ASR card in the same batch. Recognition itself remains native.
         for (query in message.queries()) {
-            val prompt = resolveCustomModelPrompt(query.text)
-            if (prompt.isNullOrBlank()) {
-                claimedAgentRooms.remove(query.roomId)
-                continue
+            try {
+                claimNativeQuery(logger, classLoader, query)
+            } catch (exception: Exception) {
+                // A later malformed query must not release native actions for an
+                // earlier request that has already been admitted in this batch.
+                logger.warnThrottled("breeno_native_query_failed") {
+                    "原生提问接管失败，type=${exception.safeLogType()}"
+                }
             }
-            val dedupKey = breenoRequestDedupKey(query.roomId, prompt.trim())
-            val startedAt = startedAgentRequests[dedupKey]
-            if (startedAt != null && System.currentTimeMillis() - startedAt <= AGENT_REQUEST_DEDUP_WINDOW_MS) {
-                rememberClaimedAgentRoom(query.roomId)
-                continue
-            }
-            val recordId = query.recordId.ifBlank { query.originalRecordId }.ifBlank { newCompactId() }
-            val request = TextRequest(
-                runId = newCompactId(),
-                text = query.text,
-                imageSnapshot = BreenoRequestImages.merge(
-                    BreenoRequestImages.captureText(query.queryPayload, "directive.query"),
-                    pendingClientImageSnapshotFor(query.recordId, query.originalRecordId, query.sessionId, query.roomId),
-                    cachedImageSnapshotFor(query.recordId, query.originalRecordId, query.sessionId, query.roomId),
-                ),
-                recordId = recordId,
-                originalRecordId = query.originalRecordId.ifBlank { recordId },
-                sessionId = query.sessionId,
-                roomId = query.roomId,
-                history = currentBreenoHistory(classLoader, query.roomId, recordId, query.text),
-                thinkingEnabledOverride = currentBreenoThinkingEnabledOverride(classLoader),
-                queryPayload = query.queryPayload,
-            )
-            startAgentRequest(logger, classLoader, request, prompt, "directive")
         }
+    }
+
+    private fun claimNativeQuery(
+        logger: ModuleLogger,
+        classLoader: ClassLoader,
+        query: BreenoNativeMessage.Query,
+    ) {
+        val prompt = resolveCustomModelPrompt(query.text)
+        if (prompt.isNullOrBlank()) {
+            claimedAgentRooms.remove(query.roomId)
+            return
+        }
+        val dedupKey = breenoRequestDedupKey(query.roomId, prompt.trim())
+        val startedAt = startedAgentRequests[dedupKey]
+        if (startedAt != null && System.currentTimeMillis() - startedAt <= AGENT_REQUEST_DEDUP_WINDOW_MS) {
+            rememberClaimedAgentRoom(query.roomId)
+            return
+        }
+        val recordId = query.recordId.ifBlank { query.originalRecordId }.ifBlank { newCompactId() }
+        val request = TextRequest(
+            runId = newCompactId(),
+            text = query.text,
+            imageSnapshot = BreenoRequestImages.merge(
+                BreenoRequestImages.captureText(query.queryPayload, "directive.query"),
+                pendingClientImageSnapshotFor(query.recordId, query.originalRecordId, query.sessionId, query.roomId),
+                cachedImageSnapshotFor(query.recordId, query.originalRecordId, query.sessionId, query.roomId),
+            ),
+            recordId = recordId,
+            originalRecordId = query.originalRecordId.ifBlank { recordId },
+            sessionId = query.sessionId,
+            roomId = query.roomId,
+            history = currentBreenoHistory(classLoader, query.roomId, recordId, query.text),
+            thinkingEnabledOverride = currentBreenoThinkingEnabledOverride(classLoader),
+            queryPayload = query.queryPayload,
+        )
+        startAgentRequest(logger, classLoader, request, prompt, "directive")
     }
 
     private fun summarizeOutboundMessage(message: Any?): String {
