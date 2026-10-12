@@ -31,13 +31,23 @@ jobs:
 
       # PR 来自 fork 时拿不到 Secrets，这里只做无需签名的检查
       # 提交号取 PR 头部提交，而非 GitHub 生成的临时合并提交
-      - name: Lint、单元测试与 Debug 构建
+      - name: Lint、单元测试与 Debug / Release 构建
         env:
           HEAD_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: >-
           ./gradlew --no-daemon --no-configuration-cache --continue
           "-Peta.buildMetadata=${HEAD_SHA::7}"
-          :app:lintDebug :app:testDebugUnitTest :app:assembleDebug
+          :app:lintDebug :app:testDebugUnitTest :app:assembleDebug :app:assembleRelease
+
+      - name: 上传 APK 与 R8 验证产物
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: pr-build-validation
+          path: |
+            app/build/outputs/apk/
+            app/build/outputs/mapping/release/
+          if-no-files-found: error
+          retention-days: 7
 
       - name: 上传检查报告
         if: failure()

@@ -7,7 +7,7 @@
   <string name="settings_language">Language</string>
   <string name="settings_language_system">Follow system</string>
   <string name="app_name">Eta</string>
-  <string name="xposed_description">A system-level AI agent that takes over Breeno and Super XiaoAI, enables Gemini and Circle to Search, and integrates browser, terminal, and device tools.</string>
+  <string name="xposed_description">A system-level AI agent that takes over Breeno and Super XiaoAI, enables Gemini and Circle to Search, and integrates browser, terminal, and device tools. Original author: Mangi-11; secondary modifications: pkczc.</string>
   <string name="agent_accessibility_label">Eta Agent</string>
   <string name="agent_accessibility_description">Read screen content and perform taps, swipes, text input, and other actions to help the agent complete tasks.</string>
   <string name="notification_history_service_label">Eta notification history</string>
@@ -391,6 +391,8 @@
   <string name="ui_about_github_star_title">Source Code</string>
   <string name="ui_about_github_star_hint">If Eta helps you, please star it on GitHub — it means a lot to us</string>
   <string name="ui_about_version_title">Version</string>
+  <string name="ui_about_authors_title">Authors</string>
+  <string name="ui_about_authors_summary">Original author: 蛮吉 (Mangi-11)\nSecondary modifications: pkczc</string>
   <string name="ui_about_update_title">Check for updates</string>
   <string name="ui_about_update_checking">Checking…</string>
   <string name="ui_about_feedback_title">Feedback</string>

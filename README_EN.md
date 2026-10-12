@@ -2,7 +2,10 @@
 
 [简体中文](README.md) | **English**
 
-<p><a href="https://github.com/Mangi-11/Eta/releases"><img src="https://img.shields.io/github/downloads/Mangi-11/Eta/total?logo=github&amp;label=Downloads&amp;color=1677FF" alt="Total GitHub Releases downloads"></a> <img src="https://img.shields.io/badge/minSdk-33-3DDC84?logo=android&amp;logoColor=white" alt="minSdk 33"> <img src="https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin 2.4.20"> <img src="https://img.shields.io/badge/AGP-9.4.1-3DDC84?logo=android&amp;logoColor=white" alt="AGP 9.4.1"> <img src="https://img.shields.io/badge/Assistant%20Integrations-ColorOS%20%26%20HyperOS-1677FF" alt="Assistant integrations for ColorOS and HyperOS"></p>
+This is the [pkczc secondary-modification fork](https://github.com/pkczc/Eta), originally authored by [蛮吉 (Mangi-11)](https://github.com/Mangi-11).
+The application package is `io.github.pkczc.eta` and installs as a separate app. Export a backup from the old version before importing it here, enable this module in LSPosed, and grant the required service permissions again.
+
+<p><a href="https://github.com/pkczc/Eta/releases"><img src="https://img.shields.io/github/downloads/pkczc/Eta/total?logo=github&amp;label=Downloads&amp;color=1677FF" alt="Total GitHub Releases downloads"></a> <img src="https://img.shields.io/badge/minSdk-33-3DDC84?logo=android&amp;logoColor=white" alt="minSdk 33"> <img src="https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin 2.4.20"> <img src="https://img.shields.io/badge/AGP-9.4.1-3DDC84?logo=android&amp;logoColor=white" alt="AGP 9.4.1"> <img src="https://img.shields.io/badge/Assistant%20Integrations-ColorOS%20%26%20HyperOS-1677FF" alt="Assistant integrations for ColorOS and HyperOS"></p>
 
 **A third-party, system-level AI assistant for Android**
 
@@ -18,7 +21,7 @@ Eta has its own agent runtime. An agent loop coordinates model requests, tool ex
 
 Requires **Android 13 or later**. The app works across phone brands, and core features do not require root. Root and LSPosed extend system access and assistant integration where permissions and ROM compatibility allow.
 
-[Download APK](https://github.com/Mangi-11/Eta/releases) · [Getting started](#getting-started) · [Why I built Eta](#why-i-built-eta)
+[Download APK](https://github.com/pkczc/Eta/releases) · [Getting started](#getting-started) · [Why I built Eta](#why-i-built-eta)
 
 ## See it in action
 
@@ -107,7 +110,7 @@ System tools, sensitive reads, sensitive actions, terminal and file access, brow
 
 ## Getting started
 
-1. Download the APK from [Releases](https://github.com/Mangi-11/Eta/releases). After installation, open **Model provider** in Settings, enter your API key, and select a model. Task execution requires tool calling; interpreting images also requires image input support.
+1. Download the APK from [Releases](https://github.com/pkczc/Eta/releases). After installation, open **Model provider** in Settings, enter your API key, and select a model. Task execution requires tool calling; interpreting images also requires image input support.
 2. Enable the tools and permissions you need. GUI control requires Eta's accessibility service. Notification access and usage access are granted separately; location tools require **Allow all the time**. The tools page shows what is available on your device.
 3. Start a conversation. For Linux, install a distribution, base tools, and any development tools you need under **Linux tool environment**. For assistant integration, see [System assistant entry points](#system-assistant-entry-points).
 
@@ -118,6 +121,8 @@ System tools, sensitive reads, sensitive actions, terminal and file access, brow
 Dedicated searches for contacts, SMS messages, and calendar events still require root. See [Device Support](docs/ROOTLESS_SUPPORT.md) for full requirements and validation coverage.
 
 ## Why I built Eta
+
+The following project background was written by the original author, 蛮吉 (Mangi-11). This fork is maintained with secondary modifications by pkczc.
 
 ### Starting with assistants I did not enjoy using
 
@@ -182,6 +187,6 @@ These implementation notes are currently in Chinese:
 
 ## License
 
-Eta uses the [PolyForm Noncommercial License 1.0.0](LICENSE); personal redistribution, sales, paid installation, and other commercial use require prior written permission from the [author](https://github.com/Mangi-11).
+Eta uses the [PolyForm Noncommercial License 1.0.0](LICENSE); personal redistribution, sales, paid installation, and other commercial use require prior written permission from the [original author, 蛮吉 (Mangi-11)](https://github.com/Mangi-11). Secondary modifications in this fork are by [pkczc](https://github.com/pkczc/Eta).
 
 <sub>Community: <a href="https://linux.do">LINUX DO</a></sub>

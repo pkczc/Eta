@@ -1,0 +1,89 @@
+package io.github.pkczc.eta.agent.model
+
+import org.json.JSONArray
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
+import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class AgentDeviceToolCatalogTest {
+    @Test
+    fun riskGroupsExposeOnlyTheirOwnTools() {
+        val none = names(false, false, false)
+        val direct = names(true, false, false)
+        val reads = names(false, true, false)
+        val actions = names(false, false, true)
+
+        assertFalse("set_alarm" in none)
+        assertTrue("set_alarm" in direct)
+        assertTrue("inspect_app" in direct)
+        assertFalse("inspect_app" in reads)
+        assertFalse("get_logcat" in direct)
+        assertTrue("get_logcat" in reads)
+        assertFalse("read_sms_code" in direct)
+        assertTrue("read_sms_code" in reads)
+        assertTrue("search_notes" in reads)
+        assertTrue("search_coloros_recordings" in reads)
+        assertTrue("search_recording_summaries" in reads)
+        assertTrue("search_system_memories" in reads)
+        assertTrue("search_notification_history" in reads)
+        assertTrue("recent_app_activity" in reads)
+        assertTrue("app_usage_summary" in reads)
+        assertTrue("get_current_location" in reads)
+        assertTrue("get_device_environment" in reads)
+        assertTrue("list_alarms" in reads)
+        assertTrue("list_active_timers" in reads)
+        assertTrue("search_clipboard_history" in reads)
+        assertTrue("get_health_summary" in reads)
+        assertTrue("search_saved_places" in reads)
+        assertTrue("search_personal_orders" in reads)
+        assertTrue("search_qq_chat_images" in reads)
+        assertTrue("search_wechat_chat_images" in reads)
+        assertFalse("read_image" in reads)
+        assertFalse("search_messages" in direct)
+        assertFalse("send_message" in reads)
+        assertFalse("send_message" in actions)
+        assertTrue("app_state_control" in actions)
+        assertTrue("create_calendar_events" in actions)
+        assertFalse("create_calendar_events" in reads)
+        assertTrue("search_bills" in reads)
+        assertFalse("personal_context" in reads)
+        assertFalse("search_coloros_notes" in reads)
+        assertFalse("search_coloros_memories" in reads)
+    }
+
+    @Test
+    fun inspectionAndLogQueryParametersHaveBoundedContracts() {
+        val tools = JSONArray()
+        AgentDeviceToolCatalog.appendTo(tools, directTools = true, sensitiveReadTools = true, sensitiveActionTools = true)
+        val validator = AgentToolCallValidator(tools)
+        fun validate(name: String, args: String) = validator.validate(AgentModelClient.ToolCall("test", name, args))
+        assertNull(validate("inspect_app", """{"package_name":"example.app","permission_offset":10,"permission_limit":100}"""))
+        assertNotNull(validate("inspect_app", """{"package_name":"example.app","permission_limit":201}"""))
+        assertNotNull(validate("inspect_app", """{"package_name":"example.app","user_id":-1}"""))
+        assertNull(validate("get_logcat", """{"pid":42,"tag":"Eta","level":"W","buffer":"crash","scan_lines":2000,"max_lines":20}"""))
+        assertNotNull(validate("get_logcat", """{"tag":"Eta;echo"}"""))
+        assertNotNull(validate("get_logcat", """{"scan_lines":10001}"""))
+    }
+
+    private fun names(
+        direct: Boolean,
+        reads: Boolean,
+        actions: Boolean,
+    ): Set<String> {
+        val tools = AgentToolCatalog.build(
+            terminalTools = false,
+            browserTools = false,
+            deviceDirectTools = direct,
+            deviceSensitiveReadTools = reads,
+            deviceSensitiveActionTools = actions,
+        )
+        return tools.toolNames()
+    }
+
+    private fun JSONArray.toolNames(): Set<String> =
+        (0 until length()).mapTo(mutableSetOf()) { index ->
+            getJSONObject(index).getJSONObject("function").getString("name")
+        }
+}
