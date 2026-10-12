@@ -2,10 +2,23 @@ package io.github.mangi.eta.hook.breeno
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.util.LinkedList
+import java.lang.reflect.Modifier
 
 class BreenoTargetsTest {
+    @Test
+    fun resolvesSynchronizedCardMutationByItsPrimitiveBooleanContract() {
+        val method = uniqueBreenoInstanceMethod(
+            CardMutation::class.java, Void.TYPE.name, Any::class.java.name,
+            Boolean::class.javaPrimitiveType!!.name,
+        )
+
+        assertEquals("mutate", method?.name)
+        assertTrue(Modifier.isSynchronized(requireNotNull(method).modifiers))
+    }
+
     @Test
     fun resolvesRenamedHistoryMethodByItsBoxedBooleanContract() {
         val method = uniqueBreenoInstanceMethod(
@@ -45,6 +58,12 @@ class BreenoTargetsTest {
 
         fun oldEntry(roomId: String, animate: Boolean): LinkedList<String> =
             LinkedList<String>().apply { if (animate) add(roomId) }
+    }
+
+    private class CardMutation {
+        @Synchronized
+        fun mutate(bean: Any, update: Boolean) = Unit
+        fun boxed(bean: Any, update: Boolean?) = Unit
     }
 
     private class AmbiguousResult {

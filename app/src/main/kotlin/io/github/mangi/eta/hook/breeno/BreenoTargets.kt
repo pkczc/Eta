@@ -12,6 +12,7 @@ internal class BreenoTargets private constructor(
     val inboundMessage: Method?,
     val cdmTextRequest: Method?,
     val chatDispatch: Method?,
+    val chatUpdate: Method?,
     val currentRoomId: Method?,
     val currentAgentName: Method?,
     val fastModeEnabled: Method?,
@@ -21,6 +22,9 @@ internal class BreenoTargets private constructor(
     val serializeHistory: Method?,
 ) {
     val missingBridgeMethods: List<String> = listOf(
+        "native-inbound" to inboundMessage,
+        "chat-dispatch" to chatDispatch,
+        "chat-update" to chatUpdate,
         "current-room" to currentRoomId,
         "current-agent" to currentAgentName,
         "history-list" to historyList,
@@ -144,6 +148,22 @@ internal class BreenoTargets private constructor(
             val historyList = structuralMethod(
                 classLoader, DATA_CENTER, "java.util.LinkedList", STRING, "java.lang.Boolean",
             )
+            val chatUpdate = targets.findMethod(
+                key = "breeno.chat-update.v1",
+                validate = {
+                    it.declaringClass.name == DATA_CENTER && it.matches(VOID, VIEW_BEAN, "boolean") &&
+                        Modifier.isSynchronized(it.modifiers) && !Modifier.isStatic(it.modifiers)
+                },
+            ) {
+                findMethod {
+                    matcher {
+                        declaredClass = DATA_CENTER
+                        paramTypes(VIEW_BEAN, "boolean")
+                        returnType = VOID
+                        modifiers = Modifier.SYNCHRONIZED
+                    }
+                }
+            }
             val insertHistory = structuralMethod(
                 classLoader, REPOSITORY, VOID, STRING, STRING, INSERT_RECORD, "kotlin.jvm.functions.Function1",
             )
@@ -175,7 +195,7 @@ internal class BreenoTargets private constructor(
                 }
             }
             return BreenoTargets(
-                outbound, inbound, cdm, chatDispatch, currentRoom, currentAgent,
+                outbound, inbound, cdm, chatDispatch, chatUpdate, currentRoom, currentAgent,
                 fastMode, historyList, insertHistory, dispatchDirectives, serializeHistory,
             )
         }
