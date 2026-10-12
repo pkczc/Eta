@@ -2,7 +2,10 @@
 
 **简体中文** | [English](README_EN.md)
 
- <p><a href="https://github.com/Mangi-11/Eta/releases"><img src="https://img.shields.io/github/downloads/Mangi-11/Eta/total?logo=github&amp;label=Downloads&amp;color=1677FF" alt="GitHub Releases 累计下载量"></a> <img src="https://img.shields.io/badge/minSdk-33-3DDC84?logo=android&amp;logoColor=white" alt="minSdk 33"> <img src="https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin 2.4.20"> <img src="https://img.shields.io/badge/AGP-9.4.1-3DDC84?logo=android&amp;logoColor=white" alt="AGP 9.4.1"> <img src="https://img.shields.io/badge/Assistant%20Integrations-ColorOS%20%26%20HyperOS-1677FF" alt="Assistant integrations for ColorOS and HyperOS"></p>
+本仓库为 [pkczc 二改版](https://github.com/pkczc/Eta)，原作者为 [蛮吉（Mangi-11）](https://github.com/Mangi-11)。
+应用包名为 `io.github.pkczc.eta`，会作为独立应用安装。迁移时请先从旧版导出备份，再在本版导入，并在 LSPosed 中为本版启用模块、重新授权所需服务。
+
+ <p><a href="https://github.com/pkczc/Eta/releases"><img src="https://img.shields.io/github/downloads/pkczc/Eta/total?logo=github&amp;label=Downloads&amp;color=1677FF" alt="GitHub Releases 累计下载量"></a> <img src="https://img.shields.io/badge/minSdk-33-3DDC84?logo=android&amp;logoColor=white" alt="minSdk 33"> <img src="https://img.shields.io/badge/Kotlin-2.4.20-7F52FF?logo=kotlin&amp;logoColor=white" alt="Kotlin 2.4.20"> <img src="https://img.shields.io/badge/AGP-9.4.1-3DDC84?logo=android&amp;logoColor=white" alt="AGP 9.4.1"> <img src="https://img.shields.io/badge/Assistant%20Integrations-ColorOS%20%26%20HyperOS-1677FF" alt="Assistant integrations for ColorOS and HyperOS"></p>
 
 **面向 Android 的第三方系统级 AI 助手**
 
@@ -18,7 +21,7 @@ Eta 内置 Agent Runtime，通过 Agent Loop 编排模型调用、工具执行�
 
 支持 **Android 13 及以上版本**，App 本体不限手机品牌，基础功能无需 Root。Root 和 LSPosed 可进一步扩展系统访问与助手入口，具体能力取决于授权和 ROM 适配。
 
-[下载 APK](https://github.com/Mangi-11/Eta/releases) · [快速开始](#快速开始) · [为什么做 Eta](#为什么做-eta)
+[下载 APK](https://github.com/pkczc/Eta/releases) · [快速开始](#快速开始) · [为什么做 Eta](#为什么做-eta)
 
 ## 界面预览
 
@@ -121,7 +124,7 @@ Provider 层支持 OpenAI-compatible Chat Completions、Responses API 和 Anthro
 
 ## 快速开始
 
-1. 从 [Releases](https://github.com/Mangi-11/Eta/releases) 下载 APK，安装后在“模型提供商”中填写 API Key 并选择默认模型。执行任务需要 Tool Calling，理解图片还需模型支持图片输入。
+1. 从 [Releases](https://github.com/pkczc/Eta/releases) 下载 APK，安装后在“模型提供商”中填写 API Key 并选择默认模型。执行任务需要 Tool Calling，理解图片还需模型支持图片输入。
 2. 按任务需要配置工具开关与权限：GUI Agent 需要无障碍服务；通知、应用使用情况分别授权；位置工具需要“始终允许”。工具页可查看当前设备的可用能力。
 3. 开始对话。需要 Linux 时，在“Linux 工具环境”中安装发行版、基础工具及所需开发工具；需要系统入口时，参见[系统助手入口](#系统助手入口)。
 
@@ -132,6 +135,8 @@ Provider 层支持 OpenAI-compatible Chat Completions、Responses API 和 Anthro
 联系人、短信、日历等专用检索目前仍需要 Root。完整条件与验证范围见[设备支持说明](docs/ROOTLESS_SUPPORT.md)。
 
 ## 为什么做 Eta
+
+以下为原作者蛮吉（Mangi-11）的项目说明；本仓库由 pkczc 二次修改。
 
 ### 从不好用的手机助手开始
 
@@ -194,6 +199,6 @@ Eta 先从现有 Android 上的模型、上下文与工具做起。真正落地�
 
 ## 许可证
 
-Eta 采用 [PolyForm Noncommercial License 1.0.0](LICENSE)，未经[作者](https://github.com/Mangi-11)书面授权，禁止个人二次分发、贩卖、收费代装及其他商业使用。
+Eta 采用 [PolyForm Noncommercial License 1.0.0](LICENSE)，未经[原作者蛮吉（Mangi-11）](https://github.com/Mangi-11)书面授权，禁止个人二次分发、贩卖、收费代装及其他商业使用。本仓库的二次修改由 [pkczc](https://github.com/pkczc/Eta) 完成。
 
 <sub></sub>社区：<a href="https://linux.do">LINUX DO</sub>

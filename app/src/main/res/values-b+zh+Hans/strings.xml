@@ -7,7 +7,7 @@
   <string name="settings_language">语言</string>
   <string name="settings_language_system">跟随系统</string>
   <string name="app_name">Eta</string>
-  <string name="xposed_description">系统级 AI Agent，接管小布与小爱，解锁 Gemini 与一圈即搜，集成浏览器、终端与设备工具</string>
+  <string name="xposed_description">系统级 AI Agent，接管小布与小爱，解锁 Gemini 与一圈即搜，集成浏览器、终端与设备工具。原作者：蛮吉（Mangi-11）；pkczc 二改。</string>
   <string name="agent_accessibility_label">Eta Agent</string>
   <string name="agent_accessibility_description">读取屏幕内容并执行点击、滑动、文字输入等操作，协助 Agent 完成任务。</string>
   <string name="notification_history_service_label">Eta 通知历史</string>
@@ -381,6 +381,8 @@
   <string name="ui_about_github_star_title">源代码</string>
   <string name="ui_about_github_star_hint">如果 Eta 帮到了你，请在 GitHub 点个 Star，这对我们意义重大</string>
   <string name="ui_about_version_title">版本</string>
+  <string name="ui_about_authors_title">作者与二改</string>
+  <string name="ui_about_authors_summary">原作者：蛮吉（Mangi-11）\n二次修改：pkczc（二改）</string>
   <string name="ui_about_update_title">检查更新</string>
   <string name="ui_about_update_checking">正在检查…</string>
   <string name="ui_about_feedback_title">问题反馈</string>

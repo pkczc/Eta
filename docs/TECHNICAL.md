@@ -28,7 +28,7 @@ Eta 使用同一组四级日志语义，并按运行环境选择后端：App 与
 
 Release 裁剪以 `app/proguard-rules.pro` 为唯一可执行事实来源，规则边界如下：
 
-- `-maximumremovedandroidloglevel 3 class io.github.mangi.eta.** { *; }` 只删除 Eta 自有代码中的 Android `VERBOSE/DEBUG`，不影响依赖库。
+- `-maximumremovedandroidloglevel 3 class io.github.pkczc.eta.** { *; }` 只删除 Eta 自有代码中的 Android `VERBOSE/DEBUG`，不影响依赖库。
 - 对 `AgentLogger.debug(Function0)`、`AndroidAgentLogger.debug(Function0)` 和 `ModuleLogger.debug(Function0)` 使用精确的 `-assumenosideeffects`，覆盖 R8 无法识别的 Xposed 日志后端。
 - 不为 `INFO/WARN/ERROR` 声明无副作用，不使用 `*Logger` 或全局 `android.util.Log` 通配裁剪规则。
 - 每次修改规则后同时构建 Debug 与 Release，并检查 R8 configuration/usage、DEX 日志调用、代表性日志字符串和 Xposed 入口元数据。
@@ -92,6 +92,12 @@ adb shell settings delete global eta_app_signer_sha256
 ## 小布助手
 
 消息处理、文本入口、聊天派发、当前房间、Agent、快速模式和历史序列化等目标按语义定位；历史读取、写入及指令派发按唯一签名定位。快速模式与深度思考保持取反关系，不把其他布尔状态当作思考开关。交付结果所需接口不完整时，不认领请求，避免请求被接管后无法回写小布。
+
+小布唤醒与语音识别继续使用原生链路。接管方式参考 [Zafiro 的输入捕获](https://github.com/niki914/zafiro/blob/1247e967ca7ee7dbb9b1da8535b4f07f6fe2adaf/app/src/main/java/com/niki914/zafiro/mod/feat/oppo/subhooks/CaptureInputHook.kt)与[原生指令过滤](https://github.com/niki914/zafiro/blob/1247e967ca7ee7dbb9b1da8535b4f07f6fe2adaf/app/src/main/java/com/niki914/zafiro/mod/feat/oppo/subhooks/FilterNativeDirectivesHook.kt)：Eta 沿用已定位的文本出站与聊天输入回调，任务入队成功后、工作线程开始前登记房间接管状态，不从语音结果或回答卡片再次发起任务。原生指令过滤、聊天插入与同步卡片写入拦截全部安装成功后才开放接管，避免只有 Runtime 转发成功而原生响应未被拦截。
+
+已接管房间过滤小布原生回答、播报、推荐和已知设备动作，包括 PhoneManager 与 SystemStorage 清理指令；同时拦截原生回答卡片的插入与同步写入，保留 Eta 注入的回复、用户提问、识别结果与其他会话生命周期指令。消息或卡片缺少 roomId 时使用当前房间，显式指定其他房间时仍按其自身归属判断。关闭自定义模型或不满足前缀条件的后续提问释放房间接管状态，模型或 Runtime 失败仍由 Eta 回写错误。图片输入继续走已有 clientResult/CDM 缓存链路，不增加前置语音解析。
+
+该机制控制小布的执行与展示，不阻止语音识别或历史同步联网。未接管房间、无法解析或超限的消息保留原生处理；ROM 或小布升级后需真机确认 Hook、原生技能命名及卡片链路是否仍匹配。
 
 ## 小布记忆
 
