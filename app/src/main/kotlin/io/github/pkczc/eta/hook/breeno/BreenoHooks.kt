@@ -66,8 +66,6 @@ internal object BreenoHooks {
         "com.heytap.speech.engine.protocol.directive.myai.StreamTextCard"
     private const val KOTLIN_FUNCTION1_CLASS = "kotlin.jvm.functions.Function1"
     private const val KOTLIN_UNIT_CLASS = "kotlin.Unit"
-    private const val EXPERIMENTAL_PREFIX = "/agent "
-    private const val EXPERIMENTAL_ADB_PREFIX = "/agent%20"
     private const val BREENO_HANDOFF_SOURCE = "breeno"
     private const val BREENO_DEFAULT_AGENT_NAME = "default"
     private const val INJECTED_MARKER_KEY = "etaAgent"
@@ -765,12 +763,11 @@ internal object BreenoHooks {
         )
     }
 
-    private fun resolveCustomModelPrompt(text: String): String? {
-        text.removeExperimentalPrefixOrNull()?.let { return it }
-        if (!Prefs.isEnabled(Prefs.Keys.AGENT_CUSTOM_MODEL)) return null
-        if (Prefs.isEnabled(Prefs.Keys.AGENT_REQUIRE_PREFIX)) return null
-        return text.trim()
-    }
+    private fun resolveCustomModelPrompt(text: String): String? = breenoCustomModelPrompt(
+        text,
+        customModelEnabled = Prefs.isEnabled(Prefs.Keys.AGENT_CUSTOM_MODEL),
+        requirePrefix = Prefs.isEnabled(Prefs.Keys.AGENT_REQUIRE_PREFIX),
+    )
 
     private fun schedulePendingResultDrains(
         logger: ModuleLogger,
@@ -2031,13 +2028,6 @@ internal object BreenoHooks {
             bean != null && invokeCompatible(bean, "getClientLocalData", key) != null
         }.getOrDefault(false)
 
-    private fun String.removeExperimentalPrefixOrNull(): String? =
-        when {
-            startsWith(EXPERIMENTAL_PREFIX) -> removePrefix(EXPERIMENTAL_PREFIX).trim()
-            startsWith(EXPERIMENTAL_ADB_PREFIX) -> removePrefix(EXPERIMENTAL_ADB_PREFIX).trim()
-            else -> null
-        }
-
     private fun invokeCompatible(target: Any, methodName: String, vararg args: Any?): Any? {
         val method = findCompatibleMethod(target.javaClass, methodName, args)
             ?: error("Method not found: ${target.javaClass.name}.$methodName/${args.size}")
@@ -2233,6 +2223,18 @@ internal class BoundedRunIdSet(
             }
         }
     }
+}
+
+internal fun breenoCustomModelPrompt(text: String, customModelEnabled: Boolean, requirePrefix: Boolean): String? {
+    if (!customModelEnabled) return null
+    val trimmed = text.trim()
+    val prompt = when {
+        trimmed.startsWith("/agent ") -> trimmed.removePrefix("/agent ").trim()
+        trimmed.startsWith("/agent%20") -> trimmed.removePrefix("/agent%20").trim()
+        requirePrefix -> return null
+        else -> trimmed
+    }
+    return prompt.takeIf(String::isNotBlank)
 }
 
 internal fun breenoRequestDedupKeys(

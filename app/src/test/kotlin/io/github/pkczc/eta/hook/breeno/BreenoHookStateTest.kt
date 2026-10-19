@@ -12,6 +12,16 @@ import org.junit.Test
 
 class BreenoHookStateTest {
     @Test
+    fun nativeModeCannotBeBypassedByAPrefixAndBothInputsNormalizeTheSamePrompt() {
+        assertNull(breenoCustomModelPrompt("/agent 调低音量", customModelEnabled = false, requirePrefix = true))
+        assertNull(breenoCustomModelPrompt("/agent%20调低音量", customModelEnabled = false, requirePrefix = false))
+        assertNull(breenoCustomModelPrompt("调低音量", customModelEnabled = true, requirePrefix = true))
+        assertEquals("调低音量", breenoCustomModelPrompt(" /agent 调低音量 ", true, true))
+        assertEquals("调低音量", breenoCustomModelPrompt("/agent%20调低音量", true, true))
+        assertEquals("调低音量", breenoCustomModelPrompt("调低音量", true, false))
+    }
+
+    @Test
     fun pendingAcksRemainBoundedAndRequestRescanOnOverflow() {
         val state = PendingAckState(capacity = 2, rescanAttempts = 2)
 
