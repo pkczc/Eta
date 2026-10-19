@@ -6,6 +6,7 @@ import io.github.pkczc.eta.agent.model.AgentModelClient
 import io.github.pkczc.eta.agent.roleplay.RoleplayBinding
 import io.github.pkczc.eta.agent.roleplay.RoleplayMessageState
 import io.github.pkczc.eta.data.model.ReasoningEffort
+import io.github.pkczc.eta.ui.components.RoleplayChatUi
 
 @Immutable
 internal data class AgentChatUiState(
@@ -183,3 +184,8 @@ data class MessageEditUiState(
     val hasLaterTurns: Boolean,
     val preserveFollowingMessages: Boolean = false,
 )
+
+/** 角色对话在界面上的身份投影；普通对话返回 null。 */
+internal fun AgentChatHomeUiState.roleplayChatUi(): RoleplayChatUi? = roleplay?.let {
+    RoleplayChatUi(characterName = it.characterName, avatarPath = it.avatarPath, userName = it.userName)
+}

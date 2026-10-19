@@ -16,6 +16,7 @@ import io.github.pkczc.eta.agent.terminal.LinuxDistribution
 import io.github.pkczc.eta.agent.terminal.LinuxExecutionBackend
 import io.github.pkczc.eta.ui.components.EtaCard
 import io.github.pkczc.eta.ui.components.EtaPreference
+import io.github.pkczc.eta.ui.components.EtaPreferenceDefaults
 import io.github.pkczc.eta.ui.components.EtaPreferenceDivider
 import io.github.pkczc.eta.ui.components.EtaPreferenceGroup
 import io.github.pkczc.eta.ui.components.EtaTextButton
@@ -38,7 +39,9 @@ internal fun LinuxEnvironmentStatusCard(
     onAction: () -> Unit,
 ) {
     EtaCard(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+        modifier = Modifier
+            .padding(horizontal = EtaPreferenceDefaults.SidePadding)
+            .padding(top = 8.dp, bottom = EtaPreferenceDefaults.GroupSpacing),
         insideMargin = PaddingValues(16.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -93,7 +96,7 @@ internal fun LinuxEnvironmentConfiguration(
 ) {
     val distributions = LinuxDistribution.entries
     val backends = listOf(LinuxExecutionBackend.PROOT, LinuxExecutionBackend.CHROOT)
-    EtaPreferenceGroup(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+    EtaPreferenceGroup {
         EtaWindowSpinnerPreference(
             title = stringResource(R.string.linux_distribution_title),
             items = distributions.map {

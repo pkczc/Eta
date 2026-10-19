@@ -30,6 +30,7 @@ import io.github.pkczc.eta.data.repository.EtaBackupSummary
 import io.github.pkczc.eta.ui.components.EtaArrowPreference
 import io.github.pkczc.eta.ui.components.EtaCard
 import io.github.pkczc.eta.ui.components.EtaPreference
+import io.github.pkczc.eta.ui.components.EtaPreferenceDefaults
 import io.github.pkczc.eta.ui.components.EtaPreferenceDivider
 import io.github.pkczc.eta.ui.components.EtaPreferenceGroup
 import io.github.pkczc.eta.ui.components.EtaPreferenceGroupTitle
@@ -218,9 +219,8 @@ internal fun DataBackupScreen(
 @Composable
 private fun BackupIcon(icon: ImageVector, loading: Boolean) {
     Box(
-        modifier = Modifier
-            .padding(end = 6.dp)
-            .size(24.dp),
+        // 与 EtaPreferenceIcon 同宽，正文和分割线起点保持对齐。
+        modifier = Modifier.size(EtaPreferenceDefaults.IconSize),
         contentAlignment = Alignment.Center,
     ) {
         if (loading) {
