@@ -3,11 +3,27 @@ package io.github.pkczc.eta.hook.breeno
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
+import org.junit.Assert.assertSame
+import org.junit.Assert.assertNotSame
 import org.junit.Test
 import java.util.LinkedList
 import java.lang.reflect.Modifier
 
 class BreenoTargetsTest {
+    @Test
+    fun substitutesOnlyNativeCleanupWhileTheRoomIsClaimed() {
+        val clean = CleanOperation()
+        val other = OtherOperation()
+        val noOp = NoOpOperation::class.java.getDeclaredConstructor().apply { isAccessible = true }
+
+        val replacement = suppressBreenoCleanup(clean, CleanOperation::class.java, noOp, claimed = true)
+        assertTrue(replacement is NoOpOperation)
+        assertNotSame(replacement, suppressBreenoCleanup(clean, CleanOperation::class.java, noOp, claimed = true))
+        assertSame(clean, suppressBreenoCleanup(clean, CleanOperation::class.java, noOp, claimed = false))
+        assertSame(other, suppressBreenoCleanup(other, CleanOperation::class.java, noOp, claimed = true))
+        assertNull(suppressBreenoCleanup(null, CleanOperation::class.java, noOp, claimed = true))
+    }
+
     @Test
     fun resolvesSynchronizedCardMutationByItsPrimitiveBooleanContract() {
         val method = uniqueBreenoInstanceMethod(
@@ -65,6 +81,10 @@ class BreenoTargetsTest {
         fun mutate(bean: Any, update: Boolean) = Unit
         fun boxed(bean: Any, update: Boolean?) = Unit
     }
+
+    private class CleanOperation
+    private class OtherOperation
+    private class NoOpOperation
 
     private class AmbiguousResult {
         fun first(): Any = "first"

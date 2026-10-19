@@ -65,17 +65,75 @@ class BreenoHookStateTest {
     fun requestDedupKeyIsFixedLengthAndDoesNotRetainPromptText() {
         val prompt = "请总结这段包含敏感信息的请求"
 
-        val key = breenoRequestDedupKey("room-42", prompt)
+        val key = requestKeys("record-1", prompt = prompt).single()
 
         assertEquals(64, key.length)
         assertFalse(key.contains(prompt))
-        assertEquals(key, breenoRequestDedupKey("room-42", prompt))
-        assertNotEquals(key, breenoRequestDedupKey("room-42", "$prompt!"))
+        assertEquals(key, requestKeys("record-1", prompt = prompt).single())
+        assertNotEquals(key, requestKeys("record-1", prompt = "$prompt!").single())
         assertNotEquals(
-            breenoRequestDedupKey("ab", "c"),
-            breenoRequestDedupKey("a", "bc"),
+            requestKeys("bc", roomId = "a"),
+            requestKeys("c", roomId = "ab"),
         )
     }
+
+    @Test
+    fun consecutiveIdenticalCommandsWithDifferentRecordIdsRemainIndependent() {
+        val first = requestKeys("record-1")
+        val second = requestKeys("record-2")
+
+        assertTrue(first.intersect(second.toSet()).isEmpty())
+        assertTrue(first.intersect(requestKeys("record-1").toSet()).isNotEmpty())
+    }
+
+    @Test
+    fun outboundAndChatCallbacksShareTheOriginalRecordAlias() {
+        val outbound = requestKeys("transport-record", originalRecordId = "query-record")
+        val query = requestKeys("query-record")
+
+        assertTrue(outbound.intersect(query.toSet()).isNotEmpty())
+        assertTrue(query.intersect(requestKeys("query-record", roomId = "other-room").toSet()).isEmpty())
+    }
+
+    @Test
+    fun missingHostRecordIdsDoNotSwallowIndependentRequests() {
+        val first = requestKeys("", fallbackId = "run-1")
+        val second = requestKeys("", fallbackId = "run-2")
+
+        assertNotEquals(first, second)
+    }
+
+    @Test
+    fun delayedCallbacksRemainDeduplicatedByTheirRecordAlias() {
+        var now = 1_000L
+        val handled = BoundedRunIdSet(capacity = 4, nowMillis = { now })
+        requestKeys("transport-record", originalRecordId = "query-record").forEach { handled.add(it) }
+
+        now += 10 * 60_000L
+        assertTrue(requestKeys("query-record").any(handled::contains))
+        assertFalse(requestKeys("new-query-record").any(handled::contains))
+    }
+
+    @Test
+    fun claimedRoomsStayOwnedDuringLongTasksAndLateRepliesUntilReleased() {
+        var now = 1_000L
+        val rooms = BoundedRunIdSet(capacity = 2, nowMillis = { now })
+        rooms.add("room-1")
+
+        now += 10 * 60_000L
+        assertTrue(rooms.contains("room-1"))
+        assertFalse(rooms.contains("other-room"))
+        rooms.remove("room-1")
+        assertFalse(rooms.contains("room-1"))
+    }
+
+    private fun requestKeys(
+        recordId: String,
+        originalRecordId: String = "",
+        roomId: String = "room-42",
+        fallbackId: String = "run-1",
+        prompt: String = "再把音量降低一点",
+    ): List<String> = breenoRequestDedupKeys(roomId, recordId, originalRecordId, fallbackId, prompt)
 
     @Test
     fun retryBudgetStopsAndCanBeResetByANewDeliveryEvent() {

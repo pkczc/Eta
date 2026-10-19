@@ -3,6 +3,7 @@ package io.github.pkczc.eta.hook.breeno
 import io.github.pkczc.eta.core.DexKitTargets
 import io.github.pkczc.eta.core.HookSupport
 import org.luckypray.dexkit.result.MethodData
+import java.lang.reflect.Constructor
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 
@@ -13,6 +14,9 @@ internal class BreenoTargets private constructor(
     val cdmTextRequest: Method?,
     val chatDispatch: Method?,
     val chatUpdate: Method?,
+    val cleanupFactory: Method?,
+    val cleanOperationType: Class<*>?,
+    val noOpOperationConstructor: Constructor<*>?,
     val currentRoomId: Method?,
     val currentAgentName: Method?,
     val fastModeEnabled: Method?,
@@ -25,6 +29,8 @@ internal class BreenoTargets private constructor(
         "native-inbound" to inboundMessage,
         "chat-dispatch" to chatDispatch,
         "chat-update" to chatUpdate,
+        "cleanup-factory" to cleanupFactory,
+        "cleanup-noop" to noOpOperationConstructor,
         "current-room" to currentRoomId,
         "current-agent" to currentAgentName,
         "history-list" to historyList,
@@ -47,6 +53,14 @@ internal class BreenoTargets private constructor(
         const val ENGINE = "com.heytap.speech.engine.HeytapSpeechEngine"
         private const val STRING = "java.lang.String"
         private const val VOID = "void"
+        private const val CLEAN_OPERATION = "com.heytap.speechassist.skill.customerservice.operation.CleanOperation"
+        private const val NO_OP_OPERATION = "com.heytap.speechassist.uitemplate.operation.DoNothingOperation"
+        private val CLEANUP_FACTORY_PARAMETERS = listOf(
+            listOf("com.heytap.speech.engine.protocol.directive.Directive", "java.util.List", STRING,
+                "com.heytap.speech.engine.net.remote.ConversationInfo"),
+            listOf("com.heytap.speech.engine.protocol.directive.Directive", "java.util.List", "java.util.List", STRING,
+                "com.heytap.speech.engine.net.remote.ConversationInfo"),
+        )
 
         fun resolve(classLoader: ClassLoader, targets: DexKitTargets): BreenoTargets {
             val outbound = structuralMethod(
@@ -174,6 +188,31 @@ internal class BreenoTargets private constructor(
             val dispatchDirectives = uniqueBreenoInstanceMethod(
                 agentClass, VOID, "java.util.List", STRING,
             )
+            val cleanOperationType = HookSupport.findClassOrNull(classLoader, CLEAN_OPERATION)
+            val noOpOperationConstructor = HookSupport.findClassOrNull(classLoader, NO_OP_OPERATION)?.let {
+                runCatching { it.getDeclaredConstructor().apply { isAccessible = true } }.getOrNull()
+            }
+            val operationType = noOpOperationConstructor?.declaringClass?.superclass
+            val cleanupFactory = if (operationType != null && operationType != Any::class.java &&
+                cleanOperationType != null && operationType.isAssignableFrom(cleanOperationType)
+            ) {
+                targets.findMethod(
+                    key = "breeno.cleanup-factory.v1",
+                    validate = {
+                        it.returnType == operationType && !it.isBridge && !it.isSynthetic &&
+                            it.parameterTypes.map { parameter -> parameter.name } in CLEANUP_FACTORY_PARAMETERS
+                    },
+                ) {
+                    CLEANUP_FACTORY_PARAMETERS.flatMap { parameters ->
+                        findMethod {
+                            matcher {
+                                paramTypes(*parameters.toTypedArray())
+                                returnType = operationType.name
+                            }
+                        }
+                    }
+                }
+            } else null
             val serializeHistory = targets.findMethod(
                 key = "breeno.history-serialize.v1",
                 validate = { it.matches(STRING, "java.lang.Object") && Modifier.isStatic(it.modifiers) },
@@ -195,7 +234,8 @@ internal class BreenoTargets private constructor(
                 }
             }
             return BreenoTargets(
-                outbound, inbound, cdm, chatDispatch, chatUpdate, currentRoom, currentAgent,
+                outbound, inbound, cdm, chatDispatch, chatUpdate,
+                cleanupFactory, cleanOperationType, noOpOperationConstructor, currentRoom, currentAgent,
                 fastMode, historyList, insertHistory, dispatchDirectives, serializeHistory,
             )
         }
@@ -227,3 +267,10 @@ internal fun uniqueBreenoInstanceMethod(
 
 private fun Method.matches(returnType: String, vararg parameterTypes: String): Boolean =
     this.returnType.name == returnType && this.parameterTypes.map { it.name } == parameterTypes.toList()
+
+internal fun suppressBreenoCleanup(
+    operation: Any?,
+    cleanType: Class<*>,
+    noOp: Constructor<*>,
+    claimed: Boolean,
+): Any? = if (claimed && cleanType.isInstance(operation)) noOp.newInstance() else operation
