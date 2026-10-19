@@ -545,6 +545,7 @@ internal object BreenoHooks {
                 request = renderRequest
             )
             val runState = ActiveAgentRun(
+                runId = request.runId,
                 roomId = request.roomId,
                 renderer = streamRenderer
             )
@@ -1245,6 +1246,7 @@ internal object BreenoHooks {
         }
 
     private class ActiveAgentRun(
+        val runId: String,
         val roomId: String,
         private val renderer: BreenoStreamRenderer
     ) {
@@ -1265,6 +1267,8 @@ internal object BreenoHooks {
 
         fun cancel(logger: ModuleLogger) {
             activationGate.cancel()
+            handledRuntimeRunIds.add(runId)
+            acknowledgeableRuntimeRunIds.add(runId)
             renderer.cancel()
             future?.let { task ->
                 task.cancel(true)
