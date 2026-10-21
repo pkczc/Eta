@@ -387,7 +387,9 @@ internal object BreenoHooks {
         val roomId = invokeString(bean, "getRoomId")
             .orEmpty()
             .ifBlank { currentRoomId(classLoader) }
-        if (!Prefs.isEnabled(Prefs.Keys.AGENT_CUSTOM_MODEL)) {
+        if (!Prefs.isEnabled(Prefs.Keys.AGENT_CUSTOM_MODEL) ||
+            !Prefs.isEnabled(Prefs.Keys.BREENO_EXCLUSIVE_TAKEOVER)
+        ) {
             releaseAgentRoom(logger, roomId)
             return
         }
@@ -487,6 +489,11 @@ internal object BreenoHooks {
         message: Any?
     ): Boolean {
         val extractedRequest = extractTextRequest(classLoader, message) ?: return false
+        val prompt = resolveCustomModelPrompt(extractedRequest.text)
+        if (prompt.isNullOrBlank()) {
+            releaseAgentRoom(logger, extractedRequest.roomId)
+            return false
+        }
         val request = extractedRequest.copy(
             history = currentBreenoHistory(
                 classLoader = classLoader,
@@ -495,12 +502,6 @@ internal object BreenoHooks {
                 currentContent = extractedRequest.text,
             ),
         )
-        val prompt = resolveCustomModelPrompt(request.text)
-        if (prompt.isNullOrBlank()) {
-            releaseAgentRoom(logger, request.roomId)
-            return false
-        }
-
         return startAgentRequest(
             logger = logger,
             classLoader = classLoader,
@@ -767,6 +768,7 @@ internal object BreenoHooks {
         text,
         customModelEnabled = Prefs.isEnabled(Prefs.Keys.AGENT_CUSTOM_MODEL),
         requirePrefix = Prefs.isEnabled(Prefs.Keys.AGENT_REQUIRE_PREFIX),
+        exclusiveTakeoverEnabled = Prefs.isEnabled(Prefs.Keys.BREENO_EXCLUSIVE_TAKEOVER),
     )
 
     private fun schedulePendingResultDrains(
@@ -1834,10 +1836,7 @@ internal object BreenoHooks {
 
     private fun singletonInstance(classLoader: ClassLoader, className: String): Any? =
         runCatching {
-            Class.forName(className, false, classLoader)
-                .getDeclaredField("INSTANCE")
-                .apply { isAccessible = true }
-                .get(null)
+            uniqueBreenoSingletonInstance(Class.forName(className, false, classLoader))
         }.getOrNull()
 
     private fun newHistoryCallback(
@@ -2225,8 +2224,13 @@ internal class BoundedRunIdSet(
     }
 }
 
-internal fun breenoCustomModelPrompt(text: String, customModelEnabled: Boolean, requirePrefix: Boolean): String? {
-    if (!customModelEnabled) return null
+internal fun breenoCustomModelPrompt(
+    text: String,
+    customModelEnabled: Boolean,
+    requirePrefix: Boolean,
+    exclusiveTakeoverEnabled: Boolean,
+): String? {
+    if (!customModelEnabled || !exclusiveTakeoverEnabled) return null
     val trimmed = text.trim()
     val prompt = when {
         trimmed.startsWith("/agent ") -> trimmed.removePrefix("/agent ").trim()

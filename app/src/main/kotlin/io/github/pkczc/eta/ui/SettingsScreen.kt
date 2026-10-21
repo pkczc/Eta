@@ -507,6 +507,17 @@ private fun SettingsPageContent(
                         SwitchPref(
                             context = context,
                             prefs = prefs,
+                            title = stringResource(R.string.ui_breeno_exclusive_takeover_title),
+                            summary = stringResource(R.string.ui_breeno_exclusive_takeover_summary),
+                            key = Prefs.Keys.BREENO_EXCLUSIVE_TAKEOVER,
+                            icon = Icons.Rounded.Security,
+                            iconTint = EtaPreferenceColors.Blue,
+                        )
+
+                        EtaPreferenceDivider()
+                        SwitchPref(
+                            context = context,
+                            prefs = prefs,
                             title = stringResource(R.string.ui_only_take_over_with_agent_prefix_d17556),
                             key = Prefs.Keys.AGENT_REQUIRE_PREFIX,
                             icon = Icons.Rounded.FilterAlt,

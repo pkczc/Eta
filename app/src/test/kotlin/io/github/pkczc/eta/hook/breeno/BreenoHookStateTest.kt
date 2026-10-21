@@ -13,12 +13,26 @@ import org.junit.Test
 class BreenoHookStateTest {
     @Test
     fun nativeModeCannotBeBypassedByAPrefixAndBothInputsNormalizeTheSamePrompt() {
-        assertNull(breenoCustomModelPrompt("/agent 调低音量", customModelEnabled = false, requirePrefix = true))
-        assertNull(breenoCustomModelPrompt("/agent%20调低音量", customModelEnabled = false, requirePrefix = false))
-        assertNull(breenoCustomModelPrompt("调低音量", customModelEnabled = true, requirePrefix = true))
-        assertEquals("调低音量", breenoCustomModelPrompt(" /agent 调低音量 ", true, true))
-        assertEquals("调低音量", breenoCustomModelPrompt("/agent%20调低音量", true, true))
-        assertEquals("调低音量", breenoCustomModelPrompt("调低音量", true, false))
+        assertNull(breenoCustomModelPrompt("/agent 调低音量", false, true, true))
+        assertNull(breenoCustomModelPrompt("/agent%20调低音量", false, false, true))
+        assertNull(breenoCustomModelPrompt("调低音量", true, true, true))
+        assertEquals("调低音量", breenoCustomModelPrompt(" /agent 调低音量 ", true, true, true))
+        assertEquals("调低音量", breenoCustomModelPrompt("/agent%20调低音量", true, true, true))
+        assertEquals("调低音量", breenoCustomModelPrompt("调低音量", true, false, true))
+    }
+
+    @Test
+    fun disablingExclusiveTakeoverReturnsNormalAndPrefixedRequestsToBreeno() {
+        listOf("调低音量", "/agent 调低音量", "/agent%20调低音量").forEach { text ->
+            listOf(false, true).forEach { requirePrefix ->
+                assertNull(breenoCustomModelPrompt(
+                    text = text,
+                    customModelEnabled = true,
+                    requirePrefix = requirePrefix,
+                    exclusiveTakeoverEnabled = false,
+                ))
+            }
+        }
     }
 
     @Test

@@ -254,6 +254,18 @@ internal class BreenoTargets private constructor(
     }
 }
 
+internal fun uniqueBreenoSingletonInstance(clazz: Class<*>?): Any? = runCatching {
+    val target = clazz ?: return@runCatching null
+    val candidates = target.declaredFields.filter {
+        Modifier.isStatic(it.modifiers) && (it.name == "INSTANCE" || it.type == target)
+    }
+    val field = candidates.singleOrNull { it.name == "INSTANCE" }
+        ?: candidates.singleOrNull()
+        ?: return@runCatching null
+    field.isAccessible = true
+    field.get(null).takeIf(target::isInstance)
+}.getOrNull()
+
 internal fun uniqueBreenoInstanceMethod(
     clazz: Class<*>?,
     returnType: String,

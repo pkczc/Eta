@@ -322,6 +322,8 @@
   <string name="ui_optional_tools_3097d6">選用工具</string>
   <string name="ui_name_1be7ae">名稱</string>
   <string name="ui_enable_vendor_assistant_custom_models_c8e465">啟用廠商助手自訂模型</string>
+  <string name="ui_breeno_exclusive_takeover_title">由 ETA 獨佔接管小布</string>
+  <string name="ui_breeno_exclusive_takeover_summary">保留小布喚醒與辨識，由 ETA 執行和回覆；仍遵循前綴設定。關閉後，新提問由小布處理。</string>
   <string name="ui_enable_this_provider_683a76">啟用此 Provider</string>
   <string name="ui_enable_terminal_file_tools_18bb43">啟用終端機/檔案工具</string>
   <string name="ui_enable_web_browsing_tools_8b6b03">啟用網頁搜尋、讀取與瀏覽器</string>

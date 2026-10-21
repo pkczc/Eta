@@ -11,6 +11,32 @@ import java.lang.reflect.Modifier
 
 class BreenoTargetsTest {
     @Test
+    fun resolvesRenamedSingletonFieldByItsStaticSelfType() {
+        assertSame(RenamedSingleton.a, uniqueBreenoSingletonInstance(RenamedSingleton::class.java))
+    }
+
+    @Test
+    fun keepsNamedSingletonInsteadOfSelectingAnAlias() {
+        assertSame(NamedSingleton.INSTANCE, uniqueBreenoSingletonInstance(NamedSingleton::class.java))
+    }
+
+    @Test
+    fun retainsNamedSingletonStoredAsItsSupertype() {
+        assertSame(GenericNamedSingleton.INSTANCE, uniqueBreenoSingletonInstance(GenericNamedSingleton::class.java))
+    }
+
+    @Test
+    fun rejectsAmbiguousSingletonFieldsInsteadOfPickingDeclarationOrder() {
+        assertNull(uniqueBreenoSingletonInstance(AmbiguousSingleton::class.java))
+    }
+
+    @Test
+    fun rejectsMissingAndNonStaticSingletonFields() {
+        assertNull(uniqueBreenoSingletonInstance(null))
+        assertNull(uniqueBreenoSingletonInstance(NonStaticSingleton::class.java))
+    }
+
+    @Test
     fun substitutesOnlyNativeCleanupWhileTheRoomIsClaimed() {
         val clean = CleanOperation()
         val other = OtherOperation()
@@ -85,6 +111,34 @@ class BreenoTargetsTest {
     private class CleanOperation
     private class OtherOperation
     private class NoOpOperation
+
+    private class RenamedSingleton private constructor() {
+        companion object {
+            val a = RenamedSingleton()
+        }
+    }
+
+    private class NamedSingleton private constructor() {
+        companion object {
+            val INSTANCE = NamedSingleton()
+            val alias = INSTANCE
+        }
+    }
+
+    private class AmbiguousSingleton private constructor() {
+        companion object {
+            val a = AmbiguousSingleton()
+            val b = AmbiguousSingleton()
+        }
+    }
+
+    private class GenericNamedSingleton private constructor() {
+        companion object {
+            val INSTANCE: Any = GenericNamedSingleton()
+        }
+    }
+
+    private class NonStaticSingleton(val child: NonStaticSingleton? = null)
 
     private class AmbiguousResult {
         fun first(): Any = "first"
