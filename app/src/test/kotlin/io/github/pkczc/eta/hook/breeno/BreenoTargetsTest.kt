@@ -37,7 +37,7 @@ class BreenoTargetsTest {
     }
 
     @Test
-    fun substitutesOnlyNativeCleanupWhileTheRoomIsClaimed() {
+    fun substitutesOnlyNativeCleanupWhileTheTurnIsClaimed() {
         val clean = CleanOperation()
         val other = OtherOperation()
         val noOp = NoOpOperation::class.java.getDeclaredConstructor().apply { isAccessible = true }

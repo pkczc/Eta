@@ -88,6 +88,8 @@ Automatic compaction needs the model's context window in tokens, set under Setti
 
 Under Settings → Xiaobu/Xiaoai compatible entrance, **Let ETA take over Breeno exclusively** is on by default. It keeps Breeno wake-up and recognition while Eta executes and replies, subject to the custom-model and `/agent` prefix settings. Turning it off returns new requests to Breeno without forwarding them to Eta; XiaoAI is unaffected. Restart the phone after updating the module to load the new code. Subsequent switch changes apply to the next request.
 
+During takeover, Breeno's own answers, their speech, and known device actions are filtered. Eta's successful final answer is read automatically through the phone's system TTS, without globally disabling speech playback. The voice follows the system TTS settings and requires an available engine and language data. A new request stops the previous reading.
+
 - **Power-button long press:** choose the default OEM assistant, Gemini, or Eta.
 - **Eta system assistant:** open Eta's text conversation panel from the power button, with screen context and follow-up conversations.
 - **Breeno / Super XiaoAI integration:** keep the familiar OEM assistant entry point while routing requests to Eta and your configured model.

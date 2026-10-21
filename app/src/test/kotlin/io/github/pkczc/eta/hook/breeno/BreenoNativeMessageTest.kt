@@ -5,6 +5,8 @@ import org.json.JSONException
 import org.json.JSONObject
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class BreenoNativeMessageTest {
@@ -30,35 +32,40 @@ class BreenoNativeMessageTest {
     fun nativeOrReleasedTurnKeepsTheOriginalPacket() {
         val raw = message(directive("System", "SetVolume"), directive("SpeechSynthesizer", "Speak")).toString()
 
-        assertEquals(raw, BreenoNativeMessage.filter(raw, "room-1") { false })
+        assertEquals(raw, BreenoNativeMessage.filter(raw, agentTurnClaimed = false))
     }
 
     @Test
     fun etaInjectedFramesBypassNativeAnswerFiltering() {
-        val raw = message(directive("MyAI", "StreamTextCard", JSONObject().put("type", 2)))
+        val raw = message(
+            directive("MyAI", "StreamTextCard", JSONObject().put("type", 2).put("content", "ETA 的回答")),
+            directive("SpeechSynthesizer", "Speak", JSONObject().put("text", "ETA 的回答")),
+        )
             .put("extend", JSONObject().put("etaAgent", true)).toString()
 
         assertEquals(raw, filter(raw))
+        assertTrue(BreenoNativeMessage.isEtaInjected(raw))
     }
 
     @Test
-    fun missingRoomUsesTheCapturedCurrentRoom() {
-        val json = message(directive("SpeechSynthesizer", "Speak")).apply { remove("roomId") }
+    fun claimedTurnDoesNotNeedRoomMetadataToSuppressNativeOutput() {
+        val json = message(
+            directive("SpeechSynthesizer", "Speak"),
+            directive("App", "Launch"),
+            directive("MyAI", "StreamTextCard", JSONObject().put("type", 2)),
+        ).apply { remove("roomId") }
 
         assertNull(filter(json.toString()))
-        assertEquals(json.toString(), BreenoNativeMessage.filter(json.toString(), "") { true })
+        assertEquals(json.toString(), BreenoNativeMessage.filter(json.toString(), agentTurnClaimed = false))
     }
 
     @Test
-    fun payloadRoomOverridesPacketAndCurrentRoom() {
+    fun mismatchedPayloadRoomCannotBypassTurnOwnership() {
         val json = message(
             directive("System", "SetVolume", JSONObject().put("roomId", "room-2")),
             directive("System", "SetVolume"),
         )
-        val result = JSONObject(requireNotNull(filter(json.toString())))
-
-        assertEquals(1, result.getJSONArray("directives").length())
-        assertEquals("room-2", result.getJSONArray("directives").getJSONObject(0).getJSONObject("payload").getString("roomId"))
+        assertNull(filter(json.toString()))
     }
 
     @Test
@@ -83,21 +90,43 @@ class BreenoNativeMessageTest {
     }
 
     @Test
-    fun nullRoomMetadataUsesCurrentRoomWithoutCreatingALiteralNullRoom() {
+    fun nullRoomMetadataCannotBypassTurnOwnership() {
         val raw = message(directive("System", "SetVolume")).put("roomId", JSONObject.NULL).toString()
 
         assertNull(filter(raw))
-        assertEquals(raw, BreenoNativeMessage.filter(raw, "") { true })
+        assertEquals(raw, BreenoNativeMessage.filter(raw, agentTurnClaimed = false))
     }
 
     @Test
-    fun emptyAndOversizedPacketsArePassedWithoutOwnershipLookup() {
+    fun emptyAndOversizedPacketsKeepTheirExistingErrorBoundary() {
         val tooLarge = "x".repeat(BreenoNativeMessage.MAX_CONTENT_CHARS + 1)
 
-        assertEquals(tooLarge, BreenoNativeMessage.filter(tooLarge, "room-1") { error("must not inspect oversized packet") })
+        assertEquals(tooLarge, filter(tooLarge))
         assertEquals("{}", filter("{}"))
         assertEquals("", filter(""))
         assertNull(filter(null))
+    }
+
+    @Test
+    fun dispatchPolicyKeepsRecognitionInputAndLifecycleButBlocksNativeOutputs() {
+        listOf("PhoneManager", "SystemStorage", "System", "SystemScreen", "App", "Sms",
+            "PhoneCall", "Ocr", "AnalogClick", "Recommend", "SpeechSynthesizer").forEach { namespace ->
+            assertTrue(namespace, BreenoNativeMessage.suppresses(namespace, "Execute", null))
+        }
+        assertTrue(BreenoNativeMessage.suppresses("MyAI", "StreamTextCard", 2))
+        assertTrue(BreenoNativeMessage.suppresses("MyAI", "StreamTextCard", 0))
+        assertTrue(BreenoNativeMessage.suppresses("MyAI", "LoadingStateCard", null))
+        assertTrue(BreenoNativeMessage.suppresses("Tracking", "BreenoFeedback", null))
+        assertFalse(BreenoNativeMessage.suppresses("MyAI", "StreamTextCard", 1))
+        assertFalse(BreenoNativeMessage.suppresses("SpeechRecognizer", "RecognizeResult", null))
+        assertFalse(BreenoNativeMessage.suppresses("Session", "Finish", null))
+        assertFalse(BreenoNativeMessage.isEtaInjected(null))
+        assertFalse(BreenoNativeMessage.isEtaInjected(message().toString()))
+    }
+
+    @Test
+    fun nativeModeDoesNotParseOrSuppressUnrelatedPackets() {
+        assertEquals("not JSON", BreenoNativeMessage.filter("not JSON", agentTurnClaimed = false))
     }
 
     @Test(expected = JSONException::class)
@@ -106,7 +135,7 @@ class BreenoNativeMessageTest {
     }
 
     private fun filter(raw: String?): String? =
-        BreenoNativeMessage.filter(raw, "room-1") { it == "room-1" }
+        BreenoNativeMessage.filter(raw, agentTurnClaimed = true)
 
     private fun names(message: JSONObject): List<String> {
         val directives = message.getJSONArray("directives")

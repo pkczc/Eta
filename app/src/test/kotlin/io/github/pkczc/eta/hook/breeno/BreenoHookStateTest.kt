@@ -138,19 +138,6 @@ class BreenoHookStateTest {
         assertFalse(requestKeys("new-query-record").any(handled::contains))
     }
 
-    @Test
-    fun claimedRoomsStayOwnedDuringLongTasksAndLateRepliesUntilReleased() {
-        var now = 1_000L
-        val rooms = BoundedRunIdSet(capacity = 2, nowMillis = { now })
-        rooms.add("room-1")
-
-        now += 10 * 60_000L
-        assertTrue(rooms.contains("room-1"))
-        assertFalse(rooms.contains("other-room"))
-        rooms.remove("room-1")
-        assertFalse(rooms.contains("room-1"))
-    }
-
     private fun requestKeys(
         recordId: String,
         originalRecordId: String = "",

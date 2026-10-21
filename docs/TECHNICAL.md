@@ -95,17 +95,19 @@ adb shell settings delete global eta_app_signer_sha256
 
 房间管理器、聊天中心、历史仓库和快速模式管理器的单例保留 `INSTANCE` 优先，同时支持唯一的静态自身类型字段，不固定混淆后的字段名；名称不可用且类型候选不唯一时放弃读取，读取后校验实例类型。此处理也覆盖原生响应缺少 roomId 时的当前房间查询。
 
-小布唤醒与语音识别继续使用原生链路。接管方式参考 [Zafiro 的输入捕获](https://github.com/niki914/zafiro/blob/861b272141324aa582120826a1609d0cd9932823/app/src/main/java/com/niki914/zafiro/mod/feat/oppo/subhooks/CaptureInputHook.kt)、[原生指令过滤](https://github.com/niki914/zafiro/blob/861b272141324aa582120826a1609d0cd9932823/app/src/main/java/com/niki914/zafiro/mod/feat/oppo/subhooks/FilterNativeDirectivesHook.kt)与[轮次接管状态](https://github.com/niki914/zafiro/blob/861b272141324aa582120826a1609d0cd9932823/agent-runtime/src/main/java/com/niki914/zafiro/chat/ActiveTurnStore.kt)：Eta 沿用已定位的文本出站与聊天输入回调，任务入队成功后、工作线程开始前登记房间接管状态，不从语音结果或回答卡片再次发起任务。原生指令过滤、清理动作保护、聊天插入与同步卡片写入拦截全部安装成功后才开放接管，避免只有 Runtime 转发成功而原生响应未被拦截。
+小布唤醒与语音识别继续使用原生链路。接管方式参考 [Zafiro 的输入捕获](https://github.com/niki914/zafiro/blob/861b272141324aa582120826a1609d0cd9932823/app/src/main/java/com/niki914/zafiro/mod/feat/oppo/subhooks/CaptureInputHook.kt)、[原生指令过滤](https://github.com/niki914/zafiro/blob/861b272141324aa582120826a1609d0cd9932823/app/src/main/java/com/niki914/zafiro/mod/feat/oppo/subhooks/FilterNativeDirectivesHook.kt)与[轮次接管状态](https://github.com/niki914/zafiro/blob/861b272141324aa582120826a1609d0cd9932823/agent-runtime/src/main/java/com/niki914/zafiro/chat/ActiveTurnStore.kt)：Eta 沿用已定位的文本出站与聊天输入回调，任务入队成功后先发布本轮的 runId，再读取历史并开放工作线程，不从语音结果或回答卡片再次发起任务。原生指令过滤、实际指令派发保护、清理动作保护、聊天插入与同步卡片写入拦截全部安装成功后才开放接管，避免只有 Runtime 转发成功而原生响应未被拦截。
 
-请求去重使用房间、宿主 recordId/originalRecordId 别名与问题摘要，同一轮从文本和聊天入口重复到达时只发起一次任务，不同记录的连续相同问题分别执行。已处理请求摘要保留在容量为 256 的有界集合中，不按时间重试同一轮。宿主没有记录 ID 时使用新的请求标识，避免吞掉独立请求；该情况下无法在缺少 ROM 证据时猜测跨入口关联。接管房间使用容量为 64 的有界集合，不因任务执行超过两分钟或迟到回复而自动放行；明确切回原生的后续提问释放对应房间并取消该房间的旧 ETA 任务，历史房间按访问顺序淘汰。
+请求去重使用房间、宿主 recordId/originalRecordId 别名与问题摘要，同一轮从文本和聊天入口重复到达时只发起一次任务，不同记录的连续相同问题分别执行。已处理请求摘要保留在容量为 256 的有界集合中，不按时间重试同一轮。宿主没有记录 ID 时使用新的请求标识，避免吞掉独立请求；该情况下无法在缺少 ROM 证据时猜测跨入口关联。接管状态以当前轮次为准，不依赖原生输出携带相同 roomId，也不随 Runtime 返回或固定时间自动解除；迟到的重复输入回调不会重新认领轮次。明确切回原生的新提问释放本轮接管状态并取消旧 ETA 任务。
 
-已接管房间过滤小布原生回答、播报、推荐和已知设备动作，包括 PhoneManager 与 SystemStorage 清理指令；同时拦截原生回答卡片的插入与同步写入，保留 Eta 注入的回复、用户提问、识别结果与其他会话生命周期指令。消息或卡片缺少 roomId 时使用当前房间，显式指定其他房间时仍按其自身归属判断。关闭自定义模型、关闭小布独占接管或不满足前缀条件的后续提问释放房间接管状态，模型或 Runtime 失败仍由 Eta 回写错误。图片输入继续走已有 clientResult/CDM 缓存链路，不增加前置语音解析。
+接管期间在云端入站和已定位的实际指令派发入口共用过滤规则，拦截小布原生回答、播报、推荐和已知设备动作，包括 PhoneManager 与 SystemStorage 清理指令；同时拦截原生回答卡片的插入与同步写入。用户提问、识别结果与其他会话生命周期指令继续放行。Eta 注入帧通过 `etaAgent` 标记放行；同线程注入也保留调用来源，避免超限 origin 或同步卡片回调误拦 Eta。关闭自定义模型、关闭小布独占接管或不满足前缀条件的新提问解除接管；入队失败也解除接管并保留原生请求，模型或 Runtime 在接管后失败则仍由 Eta 回写错误。图片输入继续走已有 clientResult/CDM 缓存链路，不增加前置语音解析。
+
+Eta 的成功最终回答在卡片交付后由独立的 Android `TextToSpeech` 客户端朗读，使用手机的系统 TTS 引擎及系统语言，不要求额外配置千问或豆包语音。只传入最终正文，复用 `SpeechText` 去掉 Markdown 与代码块并按句限长分块；不朗读思考、工具日志、失败结果或恢复的旧结果。播放前使用现有 `SpeechAudioLease` 获取音频焦点；新请求、切回原生或音频焦点丢失时停止本客户端，播放完成、初始化失败或超时后释放引擎。排队与初始化回调同时检查本轮所有权和播放器代次，防止迟到结果补播。此路径保留播放能力，不全局静音小布或停用系统 TTS；音色由手机的 TTS 设置决定，不保证与小布聊天音色相同。没有可用引擎、语言包、音频焦点或回答超过 30,000 字符时记录受控日志并保留文字回复。
 
 设置页“小布/小爱兼容入口 → 由 ETA 独占接管小布”使用 RemotePreferences 布尔键 `breeno_exclusive_takeover`，默认开启。聊天与文本出站入口共用接管条件，关闭后新提问只走原生处理，`/agent` 不能绕过；该开关不参与小爱配置。界面复用 Eta 的设置卡片与 SwitchPref，修改从下次提问生效。
 
-参考 [Zafiro 的清理保护](https://github.com/niki914/zafiro/blob/861b272141324aa582120826a1609d0cd9932823/app/src/main/java/com/niki914/zafiro/mod/feat/oppo/subhooks/SuppressCleanupHook.kt)，在指令工厂返回后把已接管房间的 CleanOperation 替换成宿主的 DoNothingOperation。工厂按空操作父类型和已知的四/五参数签名唯一定位，不固定配置中的混淆类名；类型、构造器或工厂不唯一时不开放接管，不返回不兼容的替代对象。未接管房间及其他 Operation 保持原行为。
+参考 [Zafiro 的清理保护](https://github.com/niki914/zafiro/blob/861b272141324aa582120826a1609d0cd9932823/app/src/main/java/com/niki914/zafiro/mod/feat/oppo/subhooks/SuppressCleanupHook.kt)，在指令工厂返回后把已接管轮次的 CleanOperation 替换成宿主的 DoNothingOperation。工厂按空操作父类型和已知的四/五参数签名唯一定位，不固定配置中的混淆类名；类型、构造器或工厂不唯一时不开放接管，不返回不兼容的替代对象。原生轮次及其他 Operation 保持原行为。
 
-该机制控制小布的执行与展示，不阻止语音识别或历史同步联网。未接管房间、无法解析或超限的消息保留原生处理；ROM 或小布升级后需真机确认 Hook、原生技能命名及卡片链路是否仍匹配。
+该机制控制小布的执行与展示，不阻止语音识别或历史同步联网。未接管轮次、无法解析或超限的入站消息保留原生处理，派发入口仍按已解析指令应用相同保护。过滤覆盖已知的原生技能命名空间；ROM 或小布升级后需真机确认 Hook、新增技能命名、卡片链路及系统 TTS 是否仍匹配。
 
 ## 小布记忆
 

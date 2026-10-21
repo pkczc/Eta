@@ -335,7 +335,7 @@
   <string name="ui_name_1be7ae">名称</string>
   <string name="ui_enable_vendor_assistant_custom_models_c8e465">启用厂商助手自定义模型</string>
   <string name="ui_breeno_exclusive_takeover_title">由 ETA 独占接管小布</string>
-  <string name="ui_breeno_exclusive_takeover_summary">保留小布唤醒与识别，由 ETA 执行和回复；仍遵循前缀设置。关闭后，新提问由小布处理。</string>
+  <string name="ui_breeno_exclusive_takeover_summary">保留小布唤醒与识别，ETA 独占执行、回复并用系统 TTS 播报；遵循前缀设置。关闭后，新提问由小布处理。</string>
   <string name="ui_enable_this_provider_683a76">启用此 Provider</string>
   <string name="ui_enable_terminal_file_tools_18bb43">启用终端/文件工具</string>
   <string name="ui_enable_web_browsing_tools_8b6b03">启用网页搜索、读取与浏览器</string>
