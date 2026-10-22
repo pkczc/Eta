@@ -3,6 +3,9 @@ package io.github.pkczc.eta.ui.model
 import io.github.pkczc.eta.data.model.ReasoningEffort
 
 sealed interface AgentHomeAction {
+    data object LoadEarlierMessages : AgentHomeAction
+    data class HistoryViewportChanged(val atLatest: Boolean) : AgentHomeAction
+    data object RetryConversationLoad : AgentHomeAction
     data object CompactContext : AgentHomeAction
     data class ReasoningEffortChanged(val effort: ReasoningEffort) : AgentHomeAction
     data class ModelSelected(val modelId: String) : AgentHomeAction

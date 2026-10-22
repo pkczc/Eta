@@ -321,7 +321,15 @@ internal class AgentRuntimeService : Service(), LifecycleOwner, SavedStateRegist
                     request
                 } else {
                     val runtimeConfig = runBlocking {
-                        RuntimeConfigRepository.currentRuntimeConfig()
+                        if (AgentRuntimeRequestConfigResolver.usesDefaultRuntimeConfig(request)) {
+                            RuntimeConfigRepository.currentRuntimeConfig()
+                        } else {
+                            RuntimeConfigRepository.oauthRuntimeConfigFor(
+                                providerId = request.config.providerId,
+                                authMode = request.config.authMode,
+                                modelName = request.config.model,
+                            )
+                        }
                     } ?: throw RuntimeConfigUnavailableException()
                     AgentRuntimeRequestConfigResolver.applyRuntimeConfig(request, runtimeConfig)
                 }
@@ -1231,6 +1239,8 @@ internal class AgentRuntimeService : Service(), LifecycleOwner, SavedStateRegist
     }
 
     private fun dismissAndStop() {
+        // stopSelf 不会销毁仍被客户端绑定的服务；窗口关闭后不再保留完整请求与结果历史。
+        lastCompletedRunContext = null
         mainHandler.removeCallbacks(restoreCapsule)
         capsuleYielded.value = false
         unregisterResultCardBack()

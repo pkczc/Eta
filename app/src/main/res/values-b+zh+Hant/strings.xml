@@ -176,6 +176,10 @@
   <string name="appearance_interface_scale_dialog_summary">請輸入 80 至 110 之間的整數</string>
   <string name="appearance_interface_scale_input_label">百分比</string>
   <string name="conversation_unnamed">新對話</string>
+  <string name="conversation_loading">正在載入對話…</string>
+  <string name="conversation_load_failed">對話載入失敗</string>
+  <string name="conversation_retry_earlier_messages">載入失敗，點按重試</string>
+  <string name="conversation_load_turn_start">請向上捲動到這一輪的使用者提問後再操作</string>
   <string name="conversation_search_hint">搜尋對話</string>
   <string name="conversation_empty">尚無對話</string>
   <string name="conversation_no_results">找不到相符的對話</string>
@@ -1312,8 +1316,8 @@
   <string name="speech_dictation_finish">完成聽寫</string>
   <string name="speech_read_aloud">朗讀回答</string>
   <string name="speech_read_stop">停止朗讀</string>
-  <string name="speech_auto_read_on">自動朗讀已開啟，點按關閉</string>
-  <string name="speech_auto_read_off">自動朗讀已關閉，點按開啟</string>
+  <string name="speech_disable_auto_read">關閉自動朗讀</string>
+  <string name="speech_enable_auto_read">開啟自動朗讀</string>
   <string name="read_aloud_channel">朗讀</string>
   <string name="read_aloud_notification_title">Eta 正在朗讀</string>
   <string name="speech_mic_permission">請允許 Eta 使用麥克風</string>
