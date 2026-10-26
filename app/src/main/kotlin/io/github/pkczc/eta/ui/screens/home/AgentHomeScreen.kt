@@ -3,10 +3,13 @@ package io.github.pkczc.eta.ui.screens.home
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.key
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import io.github.pkczc.eta.ui.components.AgentChatBody
 import io.github.pkczc.eta.ui.components.AgentConversationLoadState
 import io.github.pkczc.eta.ui.components.LocalRoleplayChat
+import io.github.pkczc.eta.ui.components.LocalAgentBrowserSession
+import io.github.pkczc.eta.agent.browser.BrowserSessionRegistry
 import io.github.pkczc.eta.ui.components.chatConversationCompositionKey
 import io.github.pkczc.eta.ui.model.AgentChatHomeUiState
 import io.github.pkczc.eta.ui.model.ConversationHistoryLoadState
@@ -42,7 +45,13 @@ internal fun AgentHomeScreen(
                 modifier = modifier,
             )
         } else {
-            CompositionLocalProvider(LocalRoleplayChat provides state.roleplayChatUi()) {
+            val browser = remember(conversationKey) {
+                BrowserSessionRegistry.get(conversationKey ?: BrowserSessionRegistry.MANUAL_SESSION_KEY)
+            }
+            CompositionLocalProvider(
+                LocalRoleplayChat provides state.roleplayChatUi(),
+                LocalAgentBrowserSession provides browser,
+            ) {
                 AgentChatBody(
                     messages = state.messages,
                     modelPickerState = modelPickerState,
@@ -53,12 +62,18 @@ internal fun AgentHomeScreen(
                     availableReasoningEfforts = state.availableReasoningEfforts,
                     pendingImages = state.pendingImages,
                     pendingFileReferences = state.pendingFileReferences,
+                    queuedMessages = state.queuedMessages,
+                    inputSyncVersion = state.inputSyncVersion,
                     messageEdit = state.messageEdit,
                     onReasoningEffortChange = { onAction(AgentHomeAction.ReasoningEffortChanged(it)) },
                     onCompactContext = { onAction(AgentHomeAction.CompactContext) },
                     canCompactContext = state.canCompactContext,
                     onModelSelected = { onAction(AgentHomeAction.ModelSelected(it)) },
                     onSubmit = { text -> onAction(AgentHomeAction.SubmitMessage(text)) },
+                    onInterruptAndSubmit = { text -> onAction(AgentHomeAction.InterruptAndSubmitMessage(text)) },
+                    onSteerQueuedMessage = { id -> onAction(AgentHomeAction.SteerQueuedMessage(id)) },
+                    onRecallQueuedMessage = { id, draft -> onAction(AgentHomeAction.RecallQueuedMessage(id, draft)) },
+                    onRemoveQueuedMessage = { id -> onAction(AgentHomeAction.RemoveQueuedMessage(id)) },
                     onStop = { onAction(AgentHomeAction.StopRun) },
                     onAttachImage = { uri -> onAction(AgentHomeAction.ImageAttached(uri)) },
                     onRemoveImage = { id -> onAction(AgentHomeAction.RemoveImage(id)) },

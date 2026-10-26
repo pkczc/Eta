@@ -22,6 +22,8 @@ internal data class AgentChatUiState(
     val availableReasoningEfforts: List<ReasoningEffort> = emptyList(),
     val pendingImages: List<PendingImageUi> = emptyList(),
     val pendingFileReferences: List<PendingFileReferenceUi> = emptyList(),
+    val queuedMessages: List<QueuedMessageUi> = emptyList(),
+    val inputSyncVersion: Int = 0,
     val appliedRuntimeRunIds: List<String> = emptyList(),
     val messageEdit: MessageEditUiState? = null,
     val roleplay: RoleplayBinding? = null,
@@ -66,6 +68,8 @@ data class AgentMessageUi(
     val characterEditable: Boolean = false,
     val candidateCount: Int = 1,
     val selectedCandidate: Int = 0,
+    /** 仅当前内存会话展示，不进入消息存储、归档与导出。 */
+    val searchSuggestionsHtml: List<String> = emptyList(),
 ) : AgentChatMessageUi
 
 enum class SystemNoticeCode(val wireValue: String) {
@@ -182,6 +186,15 @@ data class PendingImageUi(
 data class PendingFileReferenceUi(
     val id: String,
     val reference: AgentFileReference,
+)
+
+@Immutable
+internal data class QueuedMessageUi(
+    val id: String,
+    val content: String,
+    val pendingImages: List<PendingImageUi> = emptyList(),
+    val pendingFileReferences: List<PendingFileReferenceUi> = emptyList(),
+    val immediateInterrupt: Boolean = false,
 )
 
 @Immutable

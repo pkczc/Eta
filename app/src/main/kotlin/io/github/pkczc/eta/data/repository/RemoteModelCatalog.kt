@@ -1,6 +1,7 @@
 package io.github.pkczc.eta.data.repository
 
 import io.github.pkczc.eta.agent.auth.ProviderCredentialBinding
+import io.github.pkczc.eta.data.model.GeminiProviderSetting
 import io.github.pkczc.eta.data.model.AnthropicProviderSetting
 import io.github.pkczc.eta.data.model.CustomProviderSetting
 import io.github.pkczc.eta.data.model.Model
@@ -29,6 +30,6 @@ internal class RemoteModelCatalog(
     private fun ProviderSetting.endpointMode(): String? = when (this) {
         is OpenAiCompatibleProviderSetting -> endpointMode
         is CustomProviderSetting -> endpointMode
-        is AnthropicProviderSetting -> null
+        is AnthropicProviderSetting, is GeminiProviderSetting -> null
     }
 }

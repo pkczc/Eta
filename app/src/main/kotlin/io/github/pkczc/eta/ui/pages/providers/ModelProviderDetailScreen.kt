@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.pkczc.eta.EtaApp
 import io.github.pkczc.eta.R
+import io.github.pkczc.eta.data.model.GeminiProviderSetting
 import io.github.pkczc.eta.data.model.AnthropicProviderSetting
 import io.github.pkczc.eta.data.model.CustomProviderSetting
 import io.github.pkczc.eta.data.model.OpenAiEndpointMode
@@ -96,6 +97,10 @@ internal fun ModelProviderDetailScreen(
                 id = "",
                 name = "",
                 baseUrl = "https://api.anthropic.com",
+            )
+            NewProviderType.Gemini -> GeminiProviderSetting(
+                id = "",
+                name = "",
             )
             null -> null
         }
