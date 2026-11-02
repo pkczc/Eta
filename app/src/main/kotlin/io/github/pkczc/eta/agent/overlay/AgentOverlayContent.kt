@@ -54,7 +54,10 @@ import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -83,6 +86,7 @@ import androidx.compose.ui.unit.sp
 import io.github.pkczc.eta.ui.markdown.MarkdownTone
 import io.github.pkczc.eta.ui.markdown.StaticMarkdown
 import io.github.pkczc.eta.R
+import io.github.pkczc.eta.agent.virtualdisplay.VirtualDisplaySnapshot
 import kotlinx.coroutines.delay
 import top.yukonga.miuix.kmp.basic.ButtonDefaults
 import top.yukonga.miuix.kmp.basic.Icon
@@ -129,7 +133,17 @@ internal data class ScreenCornerRadii(val topLeft: Float, val topRight: Float, v
 }
 
 @Composable
-internal fun AgentOverlayGlow(state: AgentOverlayState, corners: ScreenCornerRadii) {
+internal fun AgentOverlayGlow(
+    state: AgentOverlayState,
+    corners: ScreenCornerRadii,
+    virtualDisplay: VirtualDisplaySnapshot = VirtualDisplaySnapshot.Inactive,
+) {
+    if (virtualDisplay.materializingToMain) {
+        VirtualDisplayMaterializeOverlay(snapshot = virtualDisplay, corners = corners)
+        return
+    }
+    // 后台虚拟屏激活时，物理屏幕属于用户，不绘制四边流光。
+    if (virtualDisplay.active) return
     val phase = state.phase
     if (phase != AgentOverlayPhase.RUNNING && phase != AgentOverlayPhase.PAUSED) return
     val running = phase == AgentOverlayPhase.RUNNING
@@ -281,7 +295,7 @@ internal fun OverlaySupplementInput(
 
 /**
  * 任务结束后的结果卡片：底部浮起的圆角面板，顶部抓手提示可下滑关闭。
- * 关闭途径有三条：下滑、系统返回（由 Service 注册）、底部"完成"按钮；
+ * 关闭途径：无交互自动收起、下滑、系统返回（由 Service 注册）、底部"完成"按钮；
  * 次要操作"复制"放在同一行，正文可滚动，过长时底部渐隐提示还有内容。
  */
 @Composable
@@ -289,6 +303,8 @@ internal fun AgentResultCard(
     state: AgentOverlayState,
     onClose: () -> Unit,
     onOpenEta: () -> Unit,
+    hasVirtualDisplayApp: Boolean = false,
+    onOpenVirtualApp: (() -> Unit)? = null,
 ) {
     var visible by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) { visible = true }
@@ -310,7 +326,16 @@ internal fun AgentResultCard(
     )
     val content = state.detailText.ifBlank { state.status.localizedText() }
     val density = LocalDensity.current
+    val scroll = rememberScrollState()
     var dragOffset by remember { mutableFloatStateOf(0f) }
+    var touching by remember { mutableStateOf(false) }
+    var interactionTick by remember { mutableIntStateOf(0) }
+    val interacting = touching || scroll.isScrollInProgress || dragOffset > 0f
+    LaunchedEffect(visible, interacting, interactionTick) {
+        if (!visible || interacting) return@LaunchedEffect
+        delay(ResultCardAutoDismissMs)
+        close()
+    }
     val settledOffset by animateFloatAsState(
         targetValue = dragOffset,
         animationSpec = spring(Spring.DampingRatioNoBouncy, Spring.StiffnessMedium),
@@ -339,6 +364,17 @@ internal fun AgentResultCard(
                     .shadow(16.dp, RoundedCornerShape(ResultCardCorner), ambientColor = Color.Black.copy(alpha = 0.18f))
                     .clip(RoundedCornerShape(ResultCardCorner))
                     .background(MiuixTheme.colorScheme.surface)
+                    .pointerInput(Unit) {
+                        awaitEachGesture {
+                            awaitPointerEvent(PointerEventPass.Initial)
+                            touching = true
+                            do {
+                                val event = awaitPointerEvent(PointerEventPass.Initial)
+                            } while (event.changes.any { it.pressed })
+                            touching = false
+                            interactionTick++
+                        }
+                    }
                     .pointerInput(Unit) {
                         detectVerticalDragGestures(
                             onDragEnd = { if (dragOffset > dismissThreshold) close() else dragOffset = 0f },
@@ -386,7 +422,6 @@ internal fun AgentResultCard(
                 }
 
                 Box(modifier = Modifier.weight(1f, fill = false)) {
-                    val scroll = rememberScrollState()
                     StaticMarkdown(
                         content = content,
                         tone = MarkdownTone.Answer,
@@ -410,14 +445,26 @@ internal fun AgentResultCard(
                     }
                 }
 
-                ResultCardActions(content = content, onOpenEta = onOpenEta, onDone = ::close)
+                ResultCardActions(
+                    content = content,
+                    onOpenEta = onOpenEta,
+                    onDone = ::close,
+                    hasVirtualDisplayApp = hasVirtualDisplayApp,
+                    onOpenVirtualApp = onOpenVirtualApp,
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ResultCardActions(content: String, onOpenEta: () -> Unit, onDone: () -> Unit) {
+private fun ResultCardActions(
+    content: String,
+    onOpenEta: () -> Unit,
+    onDone: () -> Unit,
+    hasVirtualDisplayApp: Boolean = false,
+    onOpenVirtualApp: (() -> Unit)? = null,
+) {
     @Suppress("DEPRECATION")
     val clipboard = LocalClipboardManager.current
     var copied by remember { mutableStateOf(false) }
@@ -431,7 +478,7 @@ private fun ResultCardActions(content: String, onOpenEta: () -> Unit, onDone: ()
         modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 14.dp),
         horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
-        // 复制是图标按钮，主次两个文字按钮分别是"完成"（留在当前应用）与"回到 Eta"（查看完整过程）。
+        // 复制是图标按钮，主次两个文字按钮分别是"完成"（留在当前应用）与"回到 Eta"或"打开画面"。
         IconButton(
             onClick = {
                 clipboard.setText(AnnotatedString(content))
@@ -455,15 +502,26 @@ private fun ResultCardActions(content: String, onOpenEta: () -> Unit, onDone: ()
             modifier = Modifier.weight(1f),
             minHeight = 44.dp,
         )
-        TextButton(
-            text = stringResource(R.string.overlay_result_open_eta),
-            onClick = onOpenEta,
-            modifier = Modifier.weight(1f),
-            minHeight = 44.dp,
-            colors = ButtonDefaults.textButtonColorsPrimary(),
-        )
+        if (hasVirtualDisplayApp && onOpenVirtualApp != null) {
+            TextButton(
+                text = stringResource(R.string.overlay_result_open_virtual_app),
+                onClick = onOpenVirtualApp,
+                modifier = Modifier.weight(1f),
+                minHeight = 44.dp,
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
+        } else {
+            TextButton(
+                text = stringResource(R.string.overlay_result_open_eta),
+                onClick = onOpenEta,
+                modifier = Modifier.weight(1f),
+                minHeight = 44.dp,
+                colors = ButtonDefaults.textButtonColorsPrimary(),
+            )
+        }
     }
 }
 
 private val ResultCardCorner = 28.dp
 private const val ResultCardExitMs = 200
+private const val ResultCardAutoDismissMs = 8_000L

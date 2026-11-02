@@ -1,6 +1,7 @@
 package io.github.pkczc.eta.agent.overlay
 
 import io.github.pkczc.eta.agent.runtime.AgentEvent
+import io.github.pkczc.eta.agent.runtime.AgentRuntimeWire
 import io.github.pkczc.eta.agent.runtime.GuiControlStatus
 import io.github.pkczc.eta.agent.tool.AgentToolRequirements
 
@@ -27,4 +28,22 @@ internal object AgentOverlayVisibilityPolicy {
         entrySurfaceReady: Boolean,
     ): Boolean = entrySurfaceReady && event is AgentEvent.ToolFinished &&
         requiresEntrySurfaceDismissal(event.name) && event.success != false
+
+    /**
+     * App 自身聊天页发起的任务，当用户仍停留在 Eta 前台且未启用后台虚拟屏时不再叠加系统浮窗，
+     * 避免遮挡已经在展示实时过程的对话流；若后台虚拟屏已激活，则保留顶部微缩镜胶囊供用户随时展开查看或接管。
+     */
+    internal fun shouldSuppressOverlayInEtaUi(
+        handoffSource: String?,
+        etaUiInForeground: Boolean,
+        virtualDisplayActive: Boolean = false,
+    ): Boolean = !virtualDisplayActive &&
+        etaUiInForeground &&
+        handoffSource == AgentRuntimeWire.AGENT_UI_HANDOFF_SOURCE
+
+    internal fun shouldShowResultCard(
+        hasExecutedForegroundTool: Boolean,
+        handoffSource: String?,
+        etaUiInForeground: Boolean,
+    ): Boolean = hasExecutedForegroundTool && !shouldSuppressOverlayInEtaUi(handoffSource, etaUiInForeground, virtualDisplayActive = false)
 }

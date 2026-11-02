@@ -81,6 +81,7 @@ import io.github.pkczc.eta.ui.screens.mcp.McpServersScreen
 import io.github.pkczc.eta.ui.screens.memory.AgentMemoryScreen
 import io.github.pkczc.eta.ui.screens.permissions.PermissionHealthScreen
 import io.github.pkczc.eta.ui.screens.skills.AgentSkillsScreen
+import io.github.pkczc.eta.ui.screens.subagent.SubagentSettingsScreen
 import io.github.pkczc.eta.ui.screens.terminal.LinuxEnvironmentScreen
 import io.github.pkczc.eta.ui.screens.terminal.LinuxFilesScreen
 import io.github.pkczc.eta.ui.screens.terminal.SharedFoldersScreen
@@ -467,6 +468,9 @@ fun AgentAppRoot(
             }
             entry<AppRoute.WebToolsSettings>(swipeDismiss = swipeDismiss) {
                 WebToolsSettingsScreen(onBack = ::popRoute)
+            }
+            entry<AppRoute.Subagents>(swipeDismiss = swipeDismiss) {
+                SubagentSettingsScreen(onBack = ::popRoute)
             }
             entry<AppRoute.Skills>(swipeDismiss = swipeDismiss) {
                 LaunchedEffect(Unit) {

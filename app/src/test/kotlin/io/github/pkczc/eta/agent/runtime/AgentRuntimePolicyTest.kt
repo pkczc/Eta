@@ -23,6 +23,8 @@ class AgentRuntimePolicyTest {
                 browserTools = false,
                 thinking = false,
                 autoCompaction = false,
+                subagentTools = false,
+                virtualDisplay = false,
             ),
             AgentRuntimePolicy.permissions(null),
         )
@@ -40,6 +42,8 @@ class AgentRuntimePolicyTest {
                 deviceSensitiveReadTools = true,
                 deviceSensitiveActionTools = true,
                 thinking = true,
+                subagentTools = true,
+                virtualDisplay = true,
             ),
             AgentRuntimePolicy.permissions(preferences),
         )
@@ -55,6 +59,8 @@ class AgentRuntimePolicyTest {
                 browserTools = false,
                 thinking = false,
                 autoCompaction = false,
+                subagentTools = false,
+                virtualDisplay = false,
             ),
             AgentRuntimePolicy.permissions(preferences),
         )
@@ -85,11 +91,13 @@ class AgentRuntimePolicyTest {
                 deviceDirectTools = true,
                 deviceSensitiveReadTools = true,
                 deviceSensitiveActionTools = true,
+                subagentTools = true,
             ),
             permissions = AgentRuntimePolicy.Permissions(
                 terminalTools = false,
                 browserTools = false,
                 thinking = false,
+                subagentTools = false,
             ),
         )
 
@@ -100,6 +108,7 @@ class AgentRuntimePolicyTest {
         assertFalse(constrained.deviceDirectTools)
         assertFalse(constrained.deviceSensitiveReadTools)
         assertFalse(constrained.deviceSensitiveActionTools)
+        assertFalse(constrained.subagentTools)
     }
 
     @Test
@@ -109,17 +118,19 @@ class AgentRuntimePolicyTest {
                 terminalTools = false,
                 browserTools = true,
                 thinking = false,
-            ),
+            ).copy(subagentTools = false),
             permissions = AgentRuntimePolicy.Permissions(
                 terminalTools = true,
                 browserTools = true,
                 thinking = true,
+                subagentTools = true,
             ),
         )
 
         assertFalse(constrained.terminalTools)
         assertTrue(constrained.browserTools)
         assertFalse(constrained.thinkingEnabled)
+        assertFalse(constrained.subagentTools)
     }
 
     @Test
