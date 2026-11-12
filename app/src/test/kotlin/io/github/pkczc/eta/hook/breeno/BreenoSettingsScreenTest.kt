@@ -30,7 +30,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.LooperMode
 
 @RunWith(org.robolectric.RobolectricTestRunner::class)
-@Config(application = EtaApp::class, sdk = [36])
+// 与主界面的 SDK 36 用例隔离，避免 Compose 主线程缓存跨 Robolectric 环境复用。
+@Config(application = EtaApp::class, sdk = [34])
 @LooperMode(LooperMode.Mode.PAUSED)
 class BreenoSettingsScreenTest {
     @Test
