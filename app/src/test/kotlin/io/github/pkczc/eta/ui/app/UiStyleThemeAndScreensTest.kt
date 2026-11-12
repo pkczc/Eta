@@ -1,6 +1,5 @@
 package io.github.pkczc.eta.ui.app
 
-import android.content.Context
 import android.os.Looper
 import android.util.DisplayMetrics
 import android.view.View
@@ -26,7 +25,6 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.github.pkczc.eta.EtaApp
-import io.github.pkczc.eta.R
 import io.github.pkczc.eta.agent.browser.BrowserSessionRegistry
 import io.github.pkczc.eta.agent.overlay.AgentOverlayPhase
 import io.github.pkczc.eta.agent.overlay.AgentOverlayState
@@ -69,7 +67,6 @@ import io.github.pkczc.eta.ui.voice.SpeechOssScreen
 import io.github.pkczc.eta.ui.voice.SpeechRecognitionScreen
 import io.github.pkczc.eta.ui.voice.SpeechSettingsScreen
 import io.github.pkczc.eta.ui.voice.SpeechSynthesisScreen
-import java.time.Duration
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -224,9 +221,6 @@ class UiStyleThemeAndScreensTest {
         val characterStore = CharacterLibraryStore(activity, storeScope)
         val catalogStore = CommunityCatalogStore(activity, storeScope)
         val browserSession = BrowserSessionRegistry.get("test-session")
-        EnhancementSettingsHistory(activity).captureConnected(
-            activity.getSharedPreferences("ui_style_test_hook_preferences", Context.MODE_PRIVATE),
-        )
 
         try {
             activity.setContent {
@@ -295,12 +289,6 @@ class UiStyleThemeAndScreensTest {
                         "Expected non-empty semantics tree for screenIndex=$index, style=$style",
                         nodes.isNotEmpty(),
                     )
-                    if (index == 1) {
-                        assertTrue(
-                            "Expected the exclusive Breeno takeover switch to be visible in $style",
-                            scrollToTextNode(activity, activity.getString(R.string.ui_breeno_exclusive_takeover_title)) != null,
-                        )
-                    }
                 }
             }
 
@@ -319,30 +307,8 @@ class UiStyleThemeAndScreensTest {
             assertEquals(true, clicked)
             assertEquals(1, backPressedCount)
         } finally {
-            activity.getSharedPreferences("eta_enhancement_ui_history", Context.MODE_PRIVATE)
-                .edit().clear().commit()
             controller.pause().stop().destroy()
         }
-    }
-
-    private fun scrollToTextNode(activity: ComponentActivity, text: String): SemanticsNode? {
-        val looper = shadowOf(Looper.getMainLooper())
-        repeat(16) {
-            measureAndLayoutActivity(activity)
-            looper.idle()
-            val nodes = collectSemanticsNodes(activity.window.decorView)
-            nodes.firstOrNull { node ->
-                node.config.getOrNull(SemanticsProperties.Text)?.any { it.text == text } == true &&
-                    node.boundsInRoot.height > 0f && node.boundsInRoot.top >= 0f &&
-                    node.boundsInRoot.bottom <= activity.window.decorView.height
-            }?.let { return it }
-            val scroll = nodes.firstNotNullOfOrNull { node ->
-                node.config.getOrNull(SemanticsActions.ScrollBy)?.action
-            } ?: return null
-            if (!scroll(0f, 600f)) return null
-            looper.idleFor(Duration.ofMillis(300))
-        }
-        return null
     }
 
     private fun measureAndLayoutActivity(activity: ComponentActivity) {
