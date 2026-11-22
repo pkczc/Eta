@@ -3,7 +3,9 @@ package io.github.pkczc.eta.data.repository
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import io.github.pkczc.eta.R
 import io.github.pkczc.eta.agent.web.WebToolsRuntimeConfig
+import io.github.pkczc.eta.core.AppStrings
 import io.github.pkczc.eta.data.datastore.SettingsDataStore
 import io.github.pkczc.eta.data.model.DeepSeekWebConfig
 import io.github.pkczc.eta.data.model.ProviderSourceTypes
@@ -62,7 +64,10 @@ internal object WebToolsSettingsRepository {
                 .putString(KEY_CREDENTIALS, Base64.getEncoder().encodeToString(encrypted))
                 .commit(),
         ) {
-            "网页工具凭据保存失败"
+            AppStrings.get(
+                R.string.repo_err_web_tools_credentials_save_failed,
+                "网页工具凭据保存失败",
+            )
         }
     }
 
@@ -125,4 +130,9 @@ internal object WebToolsSettingsRepository {
     }
 }
 
-internal class WebToolsCredentialsUnavailable : Exception("网页工具凭据无法解密，请重新填写并保存")
+internal class WebToolsCredentialsUnavailable : Exception(
+    AppStrings.get(
+        R.string.repo_err_web_tools_credentials_unavailable,
+        "网页工具凭据无法解密，请重新填写并保存",
+    ),
+)

@@ -115,7 +115,8 @@ internal fun ToolActivityRow(
                 status = when (message.status) {
                     ToolActivityStatusUi.Running -> SubagentActivitySnapshot.STATUS_RUNNING
                     ToolActivityStatusUi.Failed -> SubagentActivitySnapshot.STATUS_FAILED
-                    else -> SubagentActivitySnapshot.STATUS_COMPLETED
+                    ToolActivityStatusUi.Unknown -> SubagentActivitySnapshot.STATUS_CANCELLED
+                    ToolActivityStatusUi.Success -> SubagentActivitySnapshot.STATUS_COMPLETED
                 },
                 output = message.resultSummary.orEmpty(),
             )
@@ -129,6 +130,7 @@ internal fun ToolActivityRow(
         return
     }
     var expanded by rememberSaveable(message.id) { mutableStateOf(false) }
+    val onExpandItem = LocalOnChatItemExpand.current
     // 只有「当前浏览器」条目订阅实时会话快照，避免每个工具行都跟随快照重组。
     val browser = LocalAgentBrowserSession.current
     val browserSnapshot = if (showBrowserShortcut && browser != null) {
@@ -160,7 +162,17 @@ internal fun ToolActivityRow(
                 .fillMaxWidth()
                 .heightIn(min = WorkRowHeight)
                 .clip(RoundedCornerShape(10.dp))
-                .then(if (hasDetail) Modifier.clickable { expanded = !expanded } else Modifier)
+                .then(
+                    if (hasDetail) {
+                        Modifier.clickable {
+                            val nextExpanded = !expanded
+                            if (nextExpanded) onExpandItem()
+                            expanded = nextExpanded
+                        }
+                    } else {
+                        Modifier
+                    },
+                )
                 .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -216,7 +228,11 @@ internal fun ToolActivityRow(
             }
         }
 
-        AnimatedVisibility(visible = expanded) {
+        AnimatedVisibility(
+            visible = expanded,
+            enter = ExpandDownEnter,
+            exit = CollapseUpExit,
+        ) {
             ToolActivityDetail(
                 message = message,
                 browserSnapshot = browserSnapshot,
@@ -237,6 +253,7 @@ internal fun ToolGroupRow(
     modifier: Modifier = Modifier,
 ) {
     var expanded by rememberSaveable(group.key) { mutableStateOf(false) }
+    val onExpandItem = LocalOnChatItemExpand.current
     val running = group.running
     val latest = group.calls.last()
     val title = toolDisplayName(group.toolName) + " · " +
@@ -257,7 +274,11 @@ internal fun ToolGroupRow(
                 .fillMaxWidth()
                 .heightIn(min = WorkRowHeight)
                 .clip(RoundedCornerShape(10.dp))
-                .clickable { expanded = !expanded }
+                .clickable {
+                    val nextExpanded = !expanded
+                    if (nextExpanded) onExpandItem()
+                    expanded = nextExpanded
+                }
                 .padding(vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -296,7 +317,11 @@ internal fun ToolGroupRow(
                 modifier = Modifier.padding(start = 6.dp, end = 4.dp),
             )
         }
-        AnimatedVisibility(visible = expanded) {
+        AnimatedVisibility(
+            visible = expanded,
+            enter = ExpandDownEnter,
+            exit = CollapseUpExit,
+        ) {
             Column(modifier = Modifier.padding(bottom = 4.dp)) {
                 group.calls.forEach { call ->
                     Row(verticalAlignment = Alignment.Top) {

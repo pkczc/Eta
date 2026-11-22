@@ -11,6 +11,7 @@ import io.github.pkczc.eta.agent.device.RootAccess
 import io.github.pkczc.eta.agent.terminal.TerminalRuntime
 import io.github.pkczc.eta.config.Prefs
 import io.github.pkczc.eta.core.AndroidAgentLogger
+import io.github.pkczc.eta.core.AppStrings
 import io.github.pkczc.eta.core.safeLogType
 import io.github.pkczc.eta.data.datastore.SettingsDataStore
 import io.github.pkczc.eta.data.repository.AgentMemoryRepository
@@ -18,6 +19,7 @@ import io.github.pkczc.eta.data.repository.AppearanceSettingsRepository
 import io.github.pkczc.eta.data.repository.McpServerRepository
 import io.github.pkczc.eta.data.repository.LinuxEnvironmentSettingsRepository
 import io.github.pkczc.eta.data.repository.ProviderRepository
+import io.github.pkczc.eta.data.repository.ScheduledTaskRepository
 import io.github.pkczc.eta.ui.app.PredictiveBackController
 import io.github.libxposed.service.XposedService
 import io.github.libxposed.service.XposedServiceHelper
@@ -46,6 +48,7 @@ class EtaApp : Application(), XposedServiceHelper.OnServiceListener {
 
     override fun onCreate() {
         super.onCreate()
+        AppStrings.init(this)
         Prefs.initLocal(this)
         if (!AppProcessPolicy.shouldInitializeFullRuntime(Application.getProcessName(), packageName)) {
             return
@@ -61,6 +64,20 @@ class EtaApp : Application(), XposedServiceHelper.OnServiceListener {
         AgentMemoryRepository.init(this)
         ProviderRepository.init(this)
         McpServerRepository.init(this)
+        ScheduledTaskRepository.init(this)
+        applicationScope.launch {
+            runCatching {
+                ScheduledTaskRepository.reconcileAfterRestartOrClockChange(
+                    recomputeAllSchedules = false,
+                    rescheduleAlarm = true,
+                    context = this@EtaApp,
+                )
+            }.onFailure { throwable ->
+                AndroidAgentLogger.warn(
+                    "Scheduled task reconcile failed: type=${throwable.safeLogType()}"
+                )
+            }
+        }
         XposedServiceHelper.registerListener(this)
         applicationScope.launch {
             try {
@@ -84,16 +101,9 @@ class EtaApp : Application(), XposedServiceHelper.OnServiceListener {
 
     override fun onTrimMemory(level: Int) {
         super.onTrimMemory(level)
-        if (level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW ||
-            level == ComponentCallbacks2.TRIM_MEMORY_RUNNING_CRITICAL ||
-            level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
+        if (level >= ComponentCallbacks2.TRIM_MEMORY_BACKGROUND) {
             BrowserSessionRegistry.releaseIdlePages()
         }
-    }
-
-    override fun onLowMemory() {
-        super.onLowMemory()
-        BrowserSessionRegistry.releaseIdlePages()
     }
 
     override fun onServiceBind(service: XposedService) {

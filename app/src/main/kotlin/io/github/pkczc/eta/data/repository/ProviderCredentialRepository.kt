@@ -1,6 +1,7 @@
 package io.github.pkczc.eta.data.repository
 
 import android.content.Context
+import io.github.pkczc.eta.R
 import io.github.pkczc.eta.agent.auth.EncryptedProviderCredentialStorage
 import io.github.pkczc.eta.agent.auth.LiveProviderOAuthClient
 import io.github.pkczc.eta.agent.auth.ProviderAccountSummary
@@ -9,6 +10,7 @@ import io.github.pkczc.eta.agent.auth.ProviderCredentialSessions
 import io.github.pkczc.eta.agent.auth.ProviderCredentialBinding
 import io.github.pkczc.eta.agent.auth.ProviderLoginPrompt
 import io.github.pkczc.eta.agent.runtime.AgentRunController
+import io.github.pkczc.eta.core.AppStrings
 
 /** 仅由 Eta 主进程初始化和访问；调用方在 I/O 线程执行，不将返回的令牌写入配置。 */
 internal object ProviderCredentialRepository {
@@ -41,5 +43,11 @@ internal object ProviderCredentialRepository {
     fun forget(providerId: String) = sessions().forget(providerId)
 
     private fun sessions(): ProviderCredentialSessions = sessions
-        ?: throw ProviderAuthException("oauth_not_initialized", "登录服务尚未就绪，请重新打开 Eta")
+        ?: throw ProviderAuthException(
+            "oauth_not_initialized",
+            AppStrings.get(
+                R.string.repo_err_auth_service_not_ready,
+                "登录服务尚未就绪，请重新打开 Eta",
+            ),
+        )
 }

@@ -12,16 +12,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class EntrySurfaceGuardTest {
     @Test
-    fun disabledHandoffDoesNotCreateGuard() {
-        val guard = EntrySurfaceGuard.from(
-            handoff = handoff(source = "breeno", dismiss = false),
-            logger = NoOpLogger,
-        )
-
-        assertNull(guard)
-    }
-
-    @Test
     fun breenoGuardKeepsExclusionUntilTheFirstScreenshotConsumesIt() {
         val guard = EntrySurfaceGuard.from(
             handoff = handoff(source = "breeno", dismiss = true),
@@ -44,6 +34,16 @@ class EntrySurfaceGuardTest {
         assertNotNull(guard)
         assertEquals("com.miui.voiceassist", guard?.targetPackageName)
         assertEquals(setOf("com.miui.voiceassist"), guard?.consumeScreenshotExcludedPackages())
+    }
+
+    @Test
+    fun disabledHandoffDoesNotCreateGuard() {
+        val guard = EntrySurfaceGuard.from(
+            handoff = handoff(source = AgentRuntimeWire.ETA_VOICE_HANDOFF_SOURCE, dismiss = false),
+            logger = NoOpLogger,
+        )
+
+        assertNull(guard)
     }
 
     @Test
@@ -105,14 +105,14 @@ class EntrySurfaceGuardTest {
         assertEquals(
             EntrySurfaceDismissPolicy.Decision.ALREADY_GONE,
             EntrySurfaceDismissPolicy.decide(
-                targetPackageName = "com.heytap.speechassist",
+                targetPackageName = "io.github.pkczc.eta",
                 visibility = PackageWindowVisibility.GONE,
             ),
         )
         assertEquals(
             EntrySurfaceDismissPolicy.Decision.SEND_BACK,
             EntrySurfaceDismissPolicy.decide(
-                targetPackageName = "com.heytap.speechassist",
+                targetPackageName = "io.github.pkczc.eta",
                 visibility = PackageWindowVisibility.VISIBLE,
             ),
         )
@@ -130,7 +130,7 @@ class EntrySurfaceGuardTest {
         assertEquals(
             EntrySurfaceDismissPolicy.Decision.DEFER,
             EntrySurfaceDismissPolicy.decide(
-                targetPackageName = "com.heytap.speechassist",
+                targetPackageName = "io.github.pkczc.eta",
                 visibility = PackageWindowVisibility.UNKNOWN,
             ),
         )

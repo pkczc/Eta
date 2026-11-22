@@ -1,7 +1,9 @@
 package io.github.pkczc.eta.agent.voice
 
 import android.content.Context
+import io.github.pkczc.eta.R
 import io.github.pkczc.eta.core.AndroidAgentLogger
+import io.github.pkczc.eta.core.AppStrings
 import io.github.pkczc.eta.data.model.SpeechCredentials
 import io.github.pkczc.eta.data.model.SpeechSettings
 import io.github.pkczc.eta.data.repository.SpeechSettingsRepository
@@ -49,12 +51,23 @@ internal class SpeechPlaybackController(
         job = scope.launch(Dispatchers.Main.immediate) {
             try {
                 lease = SpeechAudioLease(context, interruptOnScreenOff) { stop() }.also { it.acquire(playback = false) }
-                val config = settings ?: SpeechSettingsRepository.settings()
-                val secrets = credentials ?: SpeechSettingsRepository.credentials(context)
+                val rawConfig = settings ?: SpeechSettingsRepository.settings()
+                val rawSecrets = credentials ?: SpeechSettingsRepository.credentials(context)
+                val (config, secrets) = SpeechSettingsRepository.resolveDeepSeekFallback(rawConfig, rawSecrets)
                 validateSpeechSettings(config, secrets, synthesis = true)
                 val readable = withContext(Dispatchers.Default) { SpeechText.readable(text) }
-                if (readable.isBlank()) throw SpeechFailure(SpeechErrorCode.NO_SPEECH, "这条消息没有可朗读的正文")
-                if (readable.length > 30_000) throw SpeechFailure(SpeechErrorCode.CONFIGURATION, "正文过长，请选择较短的回答朗读")
+                if (readable.isBlank()) {
+                    throw SpeechFailure(
+                        SpeechErrorCode.NO_SPEECH,
+                        AppStrings.get(R.string.voice_i18n_playback_no_readable_text, "这条消息没有可朗读的正文"),
+                    )
+                }
+                if (readable.length > 30_000) {
+                    throw SpeechFailure(
+                        SpeechErrorCode.CONFIGURATION,
+                        AppStrings.get(R.string.voice_i18n_playback_text_too_long, "正文过长，请选择较短的回答朗读"),
+                    )
+                }
                 lease?.requestPlaybackFocus { beforePlayback(); playbackActive = true }
                 val player = createOutput()
                 output = player

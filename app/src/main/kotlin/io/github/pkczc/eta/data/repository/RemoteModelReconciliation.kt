@@ -1,5 +1,7 @@
 package io.github.pkczc.eta.data.repository
 
+import io.github.pkczc.eta.R
+import io.github.pkczc.eta.core.AppStrings
 import io.github.pkczc.eta.data.model.Model
 import io.github.pkczc.eta.data.model.ModelSource
 import io.github.pkczc.eta.data.model.ProviderAuthModes
@@ -59,7 +61,12 @@ internal fun reconcileRemoteModels(
         }
         remoteByKey.forEach { (key, remote) ->
             if (key !in consumed && key in adopted) {
-                require(remote.id.isNotBlank()) { "远端模型缺少本地标识" }
+                require(remote.id.isNotBlank()) {
+                    AppStrings.get(
+                        R.string.repo_err_remote_model_missing_local_id,
+                        "远端模型缺少本地标识",
+                    )
+                }
                 add(remote.copy(
                     modelId = remote.modelId.trim(),
                     displayName = remote.displayName.trim().ifBlank { remote.modelId.trim() },

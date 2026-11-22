@@ -1,7 +1,9 @@
 package io.github.pkczc.eta.agent.voice
 
 import android.content.Context
+import io.github.pkczc.eta.R
 import io.github.pkczc.eta.core.AndroidAgentLogger
+import io.github.pkczc.eta.core.AppStrings
 import io.github.pkczc.eta.data.model.SpeechCredentials
 import io.github.pkczc.eta.data.model.SpeechOssConfig
 import io.github.pkczc.eta.data.repository.SpeechSettingsRepository
@@ -76,10 +78,21 @@ internal class SpeechOssUpload(
 
     private fun remember(entry: String) = synchronized(LOCK) {
         val pending = preferences.getStringSet("pending", emptySet())!!.toMutableSet()
-        if (pending.size >= 100) throw SpeechFailure(SpeechErrorCode.STORAGE, "待清理录音较多，请检查 OSS 删除权限后重启 Eta")
+        if (pending.size >= 100) {
+            throw SpeechFailure(
+                SpeechErrorCode.STORAGE,
+                AppStrings.get(
+                    R.string.voice_i18n_oss_pending_cleanup_limit,
+                    "待清理录音较多，请检查 OSS 删除权限后重启 Eta",
+                ),
+            )
+        }
         pending += entry
         if (!preferences.edit().putStringSet("pending", pending).commit()) {
-            throw SpeechFailure(SpeechErrorCode.STORAGE, "无法记录录音清理信息")
+            throw SpeechFailure(
+                SpeechErrorCode.STORAGE,
+                AppStrings.get(R.string.voice_i18n_oss_cleanup_record_failed, "无法记录录音清理信息"),
+            )
         }
         active += entry
     }

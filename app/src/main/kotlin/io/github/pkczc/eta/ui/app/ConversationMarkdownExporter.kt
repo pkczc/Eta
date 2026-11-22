@@ -1,6 +1,8 @@
 package io.github.pkczc.eta.ui.app
 
+import io.github.pkczc.eta.R
 import io.github.pkczc.eta.agent.model.AgentFileReferencePromptCodec
+import io.github.pkczc.eta.core.AppStrings
 import io.github.pkczc.eta.ui.model.AgentChatMessageUi
 import io.github.pkczc.eta.ui.model.AgentMessageUi
 import io.github.pkczc.eta.ui.model.SystemNoticeCode
@@ -38,7 +40,7 @@ internal object ConversationMarkdownExporter {
         val noticeModelRetry: String,
         val noticeRuntimeFailed: String,
         val noticeInterrupted: String,
-        val noticeContextCompaction: String = "上下文压缩",
+        val noticeContextCompaction: String = AppStrings.get(R.string.context_compaction, "上下文压缩"),
     ) {
         fun toolStatus(status: ToolActivityStatusUi): String = when (status) {
             ToolActivityStatusUi.Running -> toolStatusRunning
