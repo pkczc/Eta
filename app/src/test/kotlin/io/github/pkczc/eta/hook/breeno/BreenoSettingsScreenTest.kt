@@ -53,7 +53,6 @@ class BreenoSettingsScreenTest {
             activity.setContent {
                 AgentAppTheme(
                     appearance = AppearanceSettings(uiStyle = uiStyle),
-                    applyInterfaceScale = true,
                 ) {
                     SettingsScreen(context = activity, onNavigate = {}, onBack = {})
                 }
